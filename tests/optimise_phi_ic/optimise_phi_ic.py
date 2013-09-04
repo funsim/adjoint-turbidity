@@ -2,10 +2,11 @@
 
 from dolfin import *
 from dolfin_adjoint import *
-from optparse import OptionParser
+from dolfin_adjoint.adjglobals import adjointer
 
 from adjoint_sw_sediment import *
 
+from optparse import OptionParser
 import numpy as np
 import sys
 
@@ -21,66 +22,56 @@ parser.add_option('-T', '--end_time',
                   dest='T', type=float, default=10.0,
                   help='simulation end time')
 parser.add_option('-p', '--plot',
-                  dest='plot', action='store_true', default=False,
-                  help='plot results in real-time')
-parser.add_option('-P', '--plot-freq',
-                  dest='plot_freq', type=float, default=0.00001,
-                  help='provide time between plots')
+                  dest='plot', type=float, default=None,
+                  help='plot results, provide time between plots')
 parser.add_option('-s', '--save_plot',
                   dest='save_plot', action='store_true', default=False,
                   help='save plots')
-parser.add_option('-w', '--write',
-                  dest='write', action='store_true', default=False,
-                  help='write results to json file')
-parser.add_option('-W', '--write_freq',
-                  dest='write_freq', type=float, default=0.00001,
-                  help='time between writing data')
-parser.add_option('-l', '--save_loc',
-                  dest='save_loc', type=str, default='results/default',
-                  help='save location')
-parser.add_option('-i', '--iterations',
-                  dest='iterations', type=int, default=None,
-                  help='iterations between functional change')
 (options, args) = parser.parse_args()
 
-# GENERATE MODEL OBJECT
+# CLEAN UP
+input_output.clear_file('phi_ic_adj.json')
+input_output.clear_file('h_ic_adj.json')
+input_output.clear_file('phi_d_adj.json')
+input_output.clear_file('q_ic_adj.json')
+j_log = []
+
+# GET MODEL
 model = Model()
 
-model.save_loc = options.save_loc
-
-if options.plot:
-    model.plot = options.plot_freq
-model.show_plot = not options.save_plot
-model.save_plot = options.save_plot
-
-if options.write:
-    model.write = options.write_freq
-
-# time stepping
-model.timestep = model.dX_*10.0
+# Model parameters
+model.timestep = model.dX_*5.0
 model.adapt_timestep = False
 model.adapt_initial_timestep = False
 
+# Plotting
+if options.plot:
+    model.plot = options.plot
+model.show_plot = not options.save_plot
+adj_plotter = input_output.Adjoint_Plotter('results/adj_', True, True, target=True) 
+
+# INITIALISE
 model.initialise_function_spaces()
 
-plotter = input_output.Adjoint_Plotter('results/adj_', True, True, target=True)
-
+# ic
+ic_V = FunctionSpace(model.mesh, "CG", 1)
 if options.adjoint_test:
-    phi_ic = input_output.create_function_from_file('phi_ic_adj_latest.json', model.phi_FS)
+    phi_ic = input_output.create_function_from_file('phi_ic_adj_latest.json', ic_V)
 else:
-    phi_ic = project(Expression('1.0'), model.phi_FS)
-    
-model.setup(phi_ic = phi_ic)#, h_ic=h_ic)
+    phi_ic = project(Expression('1.0'), ic_V)
+
+# INITIAL FORWARD RUN
+model.setup(phi_ic = phi_ic)
 model.solve(T = options.T)
+
+# DEFINE FUNCTIONAL
 (q, h, phi, phi_d, x_N, u_N) = split(model.w[0])
 
-# get model data
+# get target data
 phi_d_aim = input_output.create_function_from_file('deposit_data.json', model.phi_d_FS)
 x_N_aim = input_output.create_function_from_file('runout_data.json', model.var_N_FS)
 
-# plot(phi_d_aim, interactive=True)
-
-# form Functional integrals
+# form functional integrals
 int_0_scale = Constant(1)
 int_1_scale = Constant(1)
 int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*int_0_scale*dx
@@ -88,20 +79,86 @@ int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*int_1_scale*dx
 
 # determine scaling
 int_0_scale.assign(1e-0/assemble(int_0))
-int_1_scale.assign(1e-2/assemble(int_1)) # 1e-4 t=5.0, 1e-4 t=10.0
-### int_0 1e-2, int_1 1e-4 - worked well for dimensionalised problem
-
-# functional regularisation
-reg_scale = Constant(1)
-int_reg = inner(grad(phi), grad(phi))*reg_scale*dx + inner(jump(phi), jump(phi))*dS
-reg_scale_base = 1e-4       # 1e-2 for t=10.0
-reg_scale.assign(reg_scale_base)
+int_1_scale.assign(1e-2/assemble(int_1))
 
 # functional
 scaling = Constant(1e-1)  # 1e0 t=5.0, 1e-1 t=10.0
-J = Functional(scaling*(int_0 + int_1)*dt[FINISH_TIME] + int_reg*dt[START_TIME])
+J = Functional(scaling*(int_0 + int_1)*dt[FINISH_TIME])
 
 if options.adjoint_test:
+    test_ic()
+
+# RF CALLBACKS
+first_replay = True
+def replay_cb(fwd_var, output_data, value):
+
+    global first_replay
+    if first_replay == True:
+        # print timings
+        try:
+            print "* * * Adjoint and optimiser time taken = {}".format(toc())
+        except:
+            pass
+        print "* * * Computing forward model"
+        tic()
+
+        # record ic
+        global cb_phi_ic
+        value_project = project(value, model.phi_FS, annotate=False)
+        cb_phi_ic = value_project.vector().array()
+        phi = cb_phi_ic.copy()
+        for i in range(len(model.mesh.cells())):
+            j = i*2
+            phi[j] = cb_phi_ic[-(j+2)]
+            phi[j+1] = cb_phi_ic[-(j+1)]
+        cb_phi_ic = phi
+        input_output.write_array_to_file('phi_ic_adj_latest.json',cb_phi_ic,'w')
+        input_output.write_array_to_file('phi_ic_adj.json',cb_phi_ic,'a')
+
+        first_replay = False
+
+    # get var
+    global cb_var
+    cb_var = adjointer.get_variable_value(fwd_var).data.copy()        
+
+def eval_cb(j, value):
+
+    global cb_phi_ic, cb_var
+    j_log.append(j)
+    input_output.write_array_to_file('j_log.json', j_log, 'w')
+    
+    y, q, h, phi, phi_d, x_N, u_N = input_output.map_to_arrays(cb_var, model.y, model.mesh) 
+    input_output.write_array_to_file('phi_d_adj_latest.json',phi_d,'w')
+    input_output.write_array_to_file('phi_d_adj.json',phi_d,'a')
+
+    adj_plotter.update_plot(cb_phi_ic, phi_d, y, x_N, j)  
+
+    print "* * * J = {}".format(j)
+    print "* * * Forward model: time taken = {}".format(toc())
+    tic()  
+    
+    global first_replay
+    first_replay = True
+
+# OPTIMISE
+reduced_functional = ReducedFunctional(J, 
+                                       [InitialConditionParameter(phi_ic)],
+                                       replay_cb = replay_cb,
+                                       eval_cb = eval_cb
+                                       )
+bounds = [[0.5], 
+          [1.5]]
+
+adj_html("forward.html", "forward")
+adj_html("adjoint.html", "adjoint")
+
+m_opt = minimize(reduced_functional, method = "L-BFGS-B", 
+                 options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
+                 bounds = bounds,
+                 in_euclidian_space = False) 
+
+# IC TEST FUNCTION
+def test_ic():
 
     g = Function(model.phi_FS)
     reg = Function(model.phi_FS)
@@ -120,62 +177,10 @@ if options.adjoint_test:
     import matplotlib.pyplot as plt
     
     dJdphi = compute_gradient(J, InitialConditionParameter(phi_ic), forget=False)
-    dJdh = compute_gradient(J, InitialConditionParameter(h_ic), forget=False)
-    # dJdq_a = compute_gradient(J, ScalarParameter(q_a), forget=False)
-    # dJdq_pa = compute_gradient(J, ScalarParameter(q_a), forget=False)
-    # dJdq_pb = compute_gradient(J, ScalarParameter(q_a), forget=False)
     
     input_output.write_array_to_file('dJdphi.json',dJdphi.vector().array(),'w')
-    input_output.write_array_to_file('dJdh.json',dJdh.vector().array(),'w')
     
     import IPython
     IPython.embed()
     
     sys.exit()
-
-# clear old data
-input_output.clear_file('phi_ic_adj.json')
-input_output.clear_file('h_ic_adj.json')
-input_output.clear_file('phi_d_adj.json')
-input_output.clear_file('q_ic_adj.json')
-j_log = []
-
-parameters["adjoint"]["stop_annotating"] = True
-        
-tic()
-
-it = 2
-if options.iterations:
-    it = options.iterations
-
-reduced_functional = MyReducedFunctional(J, 
-                                         [InitialConditionParameter(phi_ic),
-                                          # InitialConditionParameter(h_ic),
-                                          # ScalarParameter(q_a), 
-                                          # ScalarParameter(q_pa), 
-                                          # ScalarParameter(q_pb)
-                                          ])
-bounds = [[0.5], 
-          [1.5]]
-
-# # set int_1 scale to 0.0 initially 
-# # creates instabilities until a rough value has been obtained.
-# int_1_scale.assign(0.0)
-
-for i in range(15):
-    reg_scale.assign(reg_scale_base*2**(0-4*i))
-
-    adj_html("forward.html", "forward")
-    adj_html("adjoint.html", "adjoint")
-    # from IPython import embed; embed()
-
-    # SLSQP L-BFGS-B Newton-CG
-    m_opt = minimize(reduced_functional, method = "L-BFGS-B", 
-                     options = {'maxiter': it,
-                                'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
-                     bounds = bounds,
-                     in_euclidian_space = False) 
-
-    # # rescale integral scaling
-    # int_0_scale.assign(1e-5/assemble(int_0))
-    # int_1_scale.assign(1e-7/assemble(int_1))

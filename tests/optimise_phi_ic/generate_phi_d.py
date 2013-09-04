@@ -14,56 +14,36 @@ usage = (
 '''usage: %prog [options]
 ''')
 parser = OptionParser(usage=usage)
-parser.add_option('-t', '--adjoint_test',
-                  action='store_true', dest='adjoint_test', default=False,
-                  help='test adjoint solution')
 parser.add_option('-T', '--end_time',
                   dest='T', type=float, default=10.0,
                   help='simulation end time')
 parser.add_option('-p', '--plot',
-                  dest='plot', action='store_true', default=False,
-                  help='plot results in real-time')
-parser.add_option('-P', '--plot-freq',
-                  dest='plot_freq', type=float, default=0.00001,
-                  help='provide time between plots')
+                  dest='plot', type=float, default=None,
+                  help='plot results, provide time between plots')
 parser.add_option('-s', '--save_plot',
                   dest='save_plot', action='store_true', default=False,
                   help='save plots')
-parser.add_option('-w', '--write',
-                  dest='write', action='store_true', default=False,
-                  help='write results to json file')
-parser.add_option('-W', '--write_freq',
-                  dest='write_freq', type=float, default=0.00001,
-                  help='time between writing data')
-parser.add_option('-l', '--save_loc',
-                  dest='save_loc', type=str, default='results/default',
-                  help='save location')
-parser.add_option('-i', '--iterations',
-                  dest='iterations', type=int, default=None,
-                  help='iterations between functional change')
 (options, args) = parser.parse_args()
 
-# GENERATE MODEL OBJECT
+# GET MODEL
 model = Model()
 
-model.save_loc = options.save_loc
-
-if options.plot:
-    model.plot = options.plot_freq
-model.show_plot = not options.save_plot
-model.save_plot = options.save_plot
-
-if options.write:
-    model.write = options.write_freq
-
-# time stepping
-model.timestep = model.dX_*10.0
+# Model parameters
+model.timestep = model.dX_*5.0
 model.adapt_timestep = False
 model.adapt_initial_timestep = False
 
+# Plotting
+if options.plot:
+    model.plot = options.plot
+model.show_plot = not options.save_plot
+
+# INITIALISE
 model.initialise_function_spaces()
 
-phi_ic = project(Expression('1.0 - 0.1*cos(pi*x[0])'), model.phi_FS)
+# ic
+ic_V = FunctionSpace(model.mesh, "CG", 1)
+phi_ic = project(Expression('1.0 - 0.1*cos(pi*x[0])'), ic_V)
 
 model.setup(phi_ic = phi_ic) 
 

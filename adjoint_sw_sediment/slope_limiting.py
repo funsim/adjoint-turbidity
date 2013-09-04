@@ -126,7 +126,7 @@ class SlopeRHS(libadjoint.RHS):
     def __call__(self, dependencies, values):
 
         d = Function(values[0].data)
-        self.model.slope_limit(d, annotate=False)
+        slope_limit(d, annotate=False)
 
         return adjlinalg.Vector(d)
 
