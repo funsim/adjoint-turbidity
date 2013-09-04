@@ -40,6 +40,7 @@ j_log = []
 model = Model()
 
 # Model parameters
+model.dX_ = 2.0e-2
 model.timestep = model.dX_*5.0
 model.adapt_timestep = False
 model.adapt_initial_timestep = False
@@ -81,9 +82,15 @@ int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*int_1_scale*dx
 int_0_scale.assign(1e-0/assemble(int_0))
 int_1_scale.assign(1e-2/assemble(int_1))
 
+# functional regularisation
+reg_scale = Constant(1)
+int_reg = inner(grad(phi), grad(phi))*reg_scale*dx
+reg_scale_base = 1e-3       # 1e-2 for t=10.0
+reg_scale.assign(reg_scale_base)
+
 # functional
 scaling = Constant(1e-1)  # 1e0 t=5.0, 1e-1 t=10.0
-J = Functional(scaling*(int_0 + int_1)*dt[FINISH_TIME])
+J = Functional(scaling*(int_0 + int_1)*dt[FINISH_TIME] + int_reg*dt[START_TIME])
 
 if options.adjoint_test:
     test_ic()

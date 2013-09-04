@@ -29,6 +29,7 @@ parser.add_option('-s', '--save_plot',
 model = Model()
 
 # Model parameters
+model.dX_ = 2.0e-2
 model.timestep = model.dX_*5.0
 model.adapt_timestep = False
 model.adapt_initial_timestep = False
