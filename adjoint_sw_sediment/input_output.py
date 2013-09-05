@@ -198,7 +198,7 @@ class Adjoint_Plotter():
         self.phi_plot.set_ylim([0.85,1.15])
         self.phi_d_plot.set_autoscaley_on(False)
         self.phi_d_plot.set_xlim([0.0,1.10*self.target_x[0]])
-        self.phi_d_plot.set_ylim([0.0,1.10*self.target_phi.max()])
+        self.phi_d_plot.set_ylim([0.0,1.10*self.target_phi_d.max()])
         
         if self.show:
             self.fig.canvas.draw()
