@@ -18,12 +18,16 @@ if __name__=='__main__':
     parser.add_option('-p', '--plot',
                       action='store_true', dest='plot', default=False,
                       help='plot results')
+    parser.add_option('-s', '--save_plots',
+                      action='store_true', dest='save_plot', default=False,
+                      help='save plots')
     (options, args) = parser.parse_args()
     
     model = Model()
     if options.plot:
-        model.plot = 0.0
+        model.plot = 0.1
         model.show_plot = True
+        model.save_plot = options.save_plot
 
     # mesh
     model.dX_ = 5.0e-3
@@ -82,9 +86,14 @@ if __name__=='__main__':
     dX = [1.0/4, 1.0/8, 1.0/16, 1.0/32, 1.0/64]
 
     # # quick settings
-    # T = 0.52
-    # dt = [1e-1/512]
-    # dX = [1.0/4, 1.0/8, 1.0/16]
+    T = 0.52
+    dt = [1e-1/256]
+    dX = [1.0/4, 1.0/8, 1.0/16]
+
+    # # vis settings
+    T = 5.0
+    dt = [1e-1/64]
+    dX = [1.0/16]
 
     E = []
     for dt_ in dt:
@@ -95,7 +104,7 @@ if __name__=='__main__':
 
             model.dX_ = dX_
             model.timestep = dt_
-            model.t = 0.5
+            t = 0.5
 
             model.initialise_function_spaces()
 
@@ -110,13 +119,12 @@ if __name__=='__main__':
                     ),
                 K = ((27.0*model.Fr_**2.0)/(12.0 - 2.0*model.Fr_**2.0))**(1./3.),
                 Fr = model.Fr_,
-                t = model.t,
+                t = t,
                 element = model.W.ufl_element(),
                 degree = 5)
 
             w_ic = project(w_ic_E, model.W)
-            model.setup(w_ic = w_ic, similarity = True)
-            model.t = 0.5
+            model.setup(t = t, w_ic = w_ic, similarity = True)
             model.error_callback = getError
             E[-1].append(model.solve(T))
 

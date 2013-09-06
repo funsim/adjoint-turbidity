@@ -18,12 +18,16 @@ if __name__=='__main__':
     parser.add_option('-p', '--plot',
                       action='store_true', dest='plot', default=False,
                       help='plot results')
+    parser.add_option('-s', '--save_plots',
+                      action='store_true', dest='save_plot', default=False,
+                      help='save plots')
     (options, args) = parser.parse_args()
     
     model = Model()
     if options.plot:
-        model.plot = 0.0
+        model.plot = 0.01
         model.show_plot = True
+        model.save_plot = options.save_plot
 
     # mesh
     model.L_ = 1.0
@@ -92,7 +96,7 @@ if __name__=='__main__':
         return E_q, E_h, E_x_N, E_u_N
     
     # long test
-    T = 0.5
+    T = 1.0
     dt = [1e-1/8, 1e-1/16, 1e-1/32, 1e-1/64, 1e-1/128, 1e-1/256, 1e-1/512]
     dX = [1.0/4, 1.0/8, 1.0/16, 1.0/32, 1.0/64]
 
@@ -100,6 +104,10 @@ if __name__=='__main__':
     # dt = [1e-1/64]
     # dX = [1.0/16, 1.0/32, 1.0/64]
     # dX = [1.0/64]
+
+    # vis settings
+    dt = [1e-1/128]
+    dX = [1.0/128]
 
     E = []
     for dt_ in dt:
@@ -117,7 +125,7 @@ if __name__=='__main__':
             model.error_callback = getError
             E[-1].append(model.solve(T))
 
-    sw_io.write_array_to_file('dam_break.json', E, 'w')
+    input_output.write_array_to_file('dam_break.json', E, 'w')
 
     E = E[0]
     print ( "R = 0.00  0.00  0.00  0.00  E = %.2e %.2e %.2e %.2e" 

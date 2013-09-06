@@ -56,11 +56,15 @@ class Plotter():
         self.u_y_lim = np.array(q).max()*1.1
         self.phi_y_lim = phi.max()*1.10
         
-        self.fig = plt.figure(figsize=(12, 12), dpi=100)
-        self.q_plot = self.fig.add_subplot(411)
-        self.h_plot = self.fig.add_subplot(412)
-        self.phi_plot = self.fig.add_subplot(413)
-        self.phi_d_plot = self.fig.add_subplot(414)
+        self.fig = plt.figure(figsize=(12, 12), dpi=200)
+        if model.beta_:
+            self.q_plot = self.fig.add_subplot(411)
+            self.h_plot = self.fig.add_subplot(412)
+            self.phi_plot = self.fig.add_subplot(413)
+            self.phi_d_plot = self.fig.add_subplot(414)
+        else:
+            self.q_plot = self.fig.add_subplot(211)
+            self.h_plot = self.fig.add_subplot(212)
 
         self.title = self.fig.text(0.05,0.935,r'variables at $t={}$'.format(model.t))
         
@@ -75,19 +79,24 @@ class Plotter():
         
         self.q_plot.clear()
         self.h_plot.clear()
-        self.phi_plot.clear()
-        self.phi_d_plot.clear()
+        if model.beta_:
+            self.phi_plot.clear()
+            self.phi_d_plot.clear()
 
-        self.phi_d_plot.set_xlabel(r'$x$')
         self.q_plot.set_ylabel(r'$u$')
         self.h_plot.set_ylabel(r'$h$')
-        self.phi_plot.set_ylabel(r'$\varphi$')
-        self.phi_d_plot.set_ylabel(r'$\eta$')
+        if model.beta_:
+            self.phi_d_plot.set_xlabel(r'$x$')
+            self.phi_plot.set_ylabel(r'$\varphi$')
+            self.phi_d_plot.set_ylabel(r'$\eta$')
+        else:
+            self.h_plot.set_xlabel(r'$x$')
 
-        self.q_line, = self.q_plot.plot(y, q, 'r-')
+        self.q_line, = self.q_plot.plot(y, q/h, 'r-')
         self.h_line, = self.h_plot.plot(y, h, 'r-')
-        self.phi_line, = self.phi_plot.plot(y, phi, 'r-')
-        self.phi_d_line, = self.phi_d_plot.plot(y, phi_d, 'r-')
+        if model.beta_:
+            self.phi_line, = self.phi_plot.plot(y, phi, 'r-')
+            self.phi_d_line, = self.phi_d_plot.plot(y, phi_d, 'r-')
 
         if self.similarity:
             similarity_x = np.linspace(0.0,(27*model.Fr_**2.0/(12-2*model.Fr_**2.0))**(1./3.)*model.t**(2./3.),1001)
@@ -97,8 +106,8 @@ class Plotter():
             self.h_line_2, = self.h_plot.plot(similarity_x, 
                                               [similarity_h(model,x) for x in np.linspace(0.0,1.0,1001)], 
                                               'k--')
-            self.phi_line_2, = self.phi_plot.plot(similarity_x, np.ones([1001]), 'k--')
-            self.phi_d_line_2, = self.phi_d_plot.plot(y, phi_d, 'k--')
+            # self.phi_line_2, = self.phi_plot.plot(similarity_x, np.ones([1001]), 'k--')
+            # self.phi_d_line_2, = self.phi_d_plot.plot(y, phi_d, 'k--')
 
         if self.dam_break:
             dam_break_x = np.linspace(-1.0,(model.Fr_/(1.0+model.Fr_/2.0))*model.t,1001)
@@ -111,23 +120,24 @@ class Plotter():
 
         if self.rescale:
             self.h_y_lim = h.max()*1.1
-            self.u_y_lim = q.max()*1.1
+            self.u_y_lim = (q/h).max()*1.1
             self.phi_y_lim = phi.max()*1.10
 
         phi_d_y_lim = max(phi_d.max()*1.10, 1e-10)
         x_lim = x_N
         self.q_plot.set_autoscaley_on(False)
         self.q_plot.set_xlim([0.0,x_lim])
-        self.q_plot.set_ylim([q.min()*0.9,self.u_y_lim])
+        self.q_plot.set_ylim([(q/h).min()*0.9,self.u_y_lim])
         self.h_plot.set_autoscaley_on(False)
         self.h_plot.set_xlim([0.0,x_lim])
         self.h_plot.set_ylim([0.0,self.h_y_lim]) #h_int.min()*0.9,self.h_y_lim])
-        self.phi_plot.set_autoscaley_on(False)
-        self.phi_plot.set_xlim([0.0,x_lim])
-        self.phi_plot.set_ylim([0.0,self.phi_y_lim])
-        self.phi_d_plot.set_autoscaley_on(False)
-        self.phi_d_plot.set_xlim([0.0,x_lim])
-        self.phi_d_plot.set_ylim([0.0,phi_d_y_lim])
+        if model.beta_:
+            self.phi_plot.set_autoscaley_on(False)
+            self.phi_plot.set_xlim([0.0,x_lim])
+            self.phi_plot.set_ylim([0.0,self.phi_y_lim])
+            self.phi_d_plot.set_autoscaley_on(False)
+            self.phi_d_plot.set_xlim([0.0,x_lim])
+            self.phi_d_plot.set_ylim([0.0,phi_d_y_lim])
         
         if model.show_plot:
             self.fig.canvas.draw()
@@ -159,10 +169,12 @@ class Adjoint_Plotter():
         
         self.j = []
         
-        self.fig = plt.figure(figsize=(6, 4), dpi=100)
+        self.fig = plt.figure(figsize=(6, 4), dpi=200)
+        # self.fig.tight_layout()
+        self.fig.subplots_adjust(left = 0.1, wspace = 0.4)  
         self.phi_plot = self.fig.add_subplot(131)
         self.phi_d_plot = self.fig.add_subplot(132)
-        self.j_plot = self.fig.add_subplot(133)
+        self.j_plot = self.fig.add_subplot(133) 
 
     def update_plot(self, phi_ic, phi_d, x, x_N, j):  
         
@@ -281,13 +293,23 @@ def timestep_info_string(model, tex=False):
         sus += phi_c*DX
 
     if tex:
-        return ("$t$ = {0:.2e}, $dt$ = {1:.2e}:\n".format(model.t, model.timestep) +
-                "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
-                .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
+        if model.beta_:
+            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, model.timestep) +
+                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
+                    .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
+        else:
+            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, model.timestep) +
+                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, h = {4:.2e}"
+                    .format(x_N, u_N, h_N, q_cons, h_cons))
     else:
-        return ("t = {0:.2e}, dt = {1:.2e}:\n".format(model.t, model.timestep) +
+        if model.beta_:
+            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, model.timestep) +
                 "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
                 .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
+        else:
+            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, model.timestep) +
+                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, h = {4:.2e}"
+                .format(x_N, u_N, h_N, q_cons, h_cons))
 
 def map_to_arrays(w, x, mesh):
 

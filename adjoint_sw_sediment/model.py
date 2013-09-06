@@ -126,15 +126,15 @@ class Model():
         self.w = dict()
         self.w[0] = Function(self.W, name='U')
 
-    def setup(self, h_ic = None, phi_ic = None, 
+    def setup(self, t = 0.0, h_ic = None, phi_ic = None, 
               q_a = Constant(0.0), q_pa = Constant(0.0), q_pb = Constant(1.0), 
               w_ic = None, zero_q = False, similarity = False, dam_break = False):
         # q_a between 0.0 and 1.0 
         # q_pa between 0.2 and 0.99 
         # q_pb between 1.0 and 
 
-        # set time to zero
-        self.t = 0.0
+        # set time to initial t
+        self.t = t
 
         # define constants
         self.Fr = Constant(self.Fr_, name="Fr")
@@ -204,7 +204,7 @@ class Model():
         if self.plot:
             self.plotter = io.Plotter(self, rescale=True, file=self.save_loc, 
                                          similarity = similarity, dam_break = dam_break)
-            self.plot_t = self.plot
+            self.plot_t = self.t + self.plot
 
         # write ic's
         if self.write:
