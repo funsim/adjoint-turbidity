@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns="http://relaxng.org/ns/structure/1.0">
+  <include href="spud_base.rng"/>
+  <start>
+    <element name="adjoint_sw_sediment">
+      <element name="project_name">
+        <a:documentation>Model output files are named according to the project
+name, e.g. [simulation_name]_0.png. Non-standard
+characters in the project name should be avoided.</a:documentation>
+        <ref name="anystring"/>
+      </element>
+      <element name="mesh">
+        <a:documentation>Options dealing with the specification of the mesh</a:documentation>
+        <optional>
+          <element name="element_count">
+            <a:documentation>The number of elements, default = 20</a:documentation>
+            <ref name="integer"/>
+          </element>
+        </optional>
+      </element>
+      <element name="time_options">
+        <a:documentation>Options dealing with the specification of the time discretisation</a:documentation>
+        <ref name="time_discretisation_choice">
+          <a:documentation>time discretisation choice</a:documentation>
+        </ref>
+        <optional>
+          <element name="start_time">
+            <a:documentation>start time, default = 0.0</a:documentation>
+            <ref name="real"/>
+          </element>
+        </optional>
+        <element name="timestep">
+          <a:documentation>timestep</a:documentation>
+          <ref name="real"/>
+        </element>
+        <optional>
+          <element name="adaptive_timestep">
+            <a:documentation>adaptive timestep</a:documentation>
+            <element name="adapt_initial_timestep">
+              <empty/>
+            </element>
+            <element name="cfl_criteria">
+              <ref name="real"/>
+            </element>
+          </element>
+        </optional>
+      </element>
+      <element name="output_options">
+        <optional>
+          <!-- plot results -->
+          <element name="plotting">
+            <!-- plot results as they are calculated -->
+            <element name="plotting_interval">
+              <ref name="real"/>
+            </element>
+            <choice>
+              <!-- plot results as they are calculated -->
+              <element name="output">
+                <value>live_plotting</value>
+              </element>
+              <!-- save plots to file -->
+              <element name="output">
+                <value>save_plots</value>
+              </element>
+              <!-- save plots to file -->
+              <element name="output">
+                <value>both</value>
+              </element>
+            </choice>
+          </element>
+        </optional>
+      </element>
+      <!-- spatial discretisation -->
+      <element name="spatial_discretisation">
+        <choice>
+          <!-- plot results as they are calculated -->
+          <element name="discretisation">
+            <attribute name="name">
+              <value>discontinuous</value>
+            </attribute>
+            <optional>
+              <element name="slope_limit">
+                <empty/>
+              </element>
+            </optional>
+          </element>
+          <!-- save plots to file -->
+          <element name="discretisation">
+            <attribute name="name">
+              <value>continuous</value>
+            </attribute>
+          </element>
+        </choice>
+      </element>
+      <element name="initial_conditions">
+        <a:documentation>Options dealing with the specification of initial conditions</a:documentation>
+        <optional>
+          <element name="initial_length">
+            <a:documentation>The non-dimensionalised initial length of the current, default=1.0</a:documentation>
+            <ref name="real"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="height">
+            <a:documentation>C code for expression describing the initial height of the current, default=1.0</a:documentation>
+            <ref name="anystring"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="momentum">
+            <a:documentation>C code for expression describing the initial momentum of the current, default=0.0</a:documentation>
+            <ref name="anystring"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="volume_fraction">
+            <a:documentation>C code for expression describing the initial volume fraction of the current, default=1.0</a:documentation>
+            <ref name="anystring"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="volume_fraction">
+            <a:documentation>C code for expression describing the initial deposited sediment, default=0.0</a:documentation>
+            <ref name="anystring"/>
+          </element>
+        </optional>
+      </element>
+      <optional>
+        <element name="testing">
+          <a:documentation>Test specific options - only enable when testing</a:documentation>
+          <ref name="test_choice"/>
+        </element>
+      </optional>
+    </element>
+  </start>
+  <define name="time_discretisation_choice">
+    <choice>
+      <element name="time_discretisation">
+        <attribute name="name">
+          <value>crank_nicholson</value>
+        </attribute>
+      </element>
+      <element name="time_discretisation">
+        <attribute name="name">
+          <value>explicit</value>
+        </attribute>
+      </element>
+      <element name="time_discretisation">
+        <attribute name="name">
+          <value>implicit</value>
+        </attribute>
+      </element>
+    </choice>
+  </define>
+  <define name="test_choice">
+    <choice>
+      <element name="test">
+        <attribute name="name">
+          <value>mms</value>
+        </attribute>
+      </element>
+      <element name="test">
+        <attribute name="name">
+          <value>similarity</value>
+        </attribute>
+      </element>
+      <element name="test">
+        <attribute name="name">
+          <value>dam_break</value>
+        </attribute>
+      </element>
+    </choice>
+  </define>
+</grammar>
+<!--
+  input_choice_real_contents =
+     ## Constant value
+     element constant {
+        real
+     }|
+     ## Python function prescribing real input. Functions should be of the form:
+     ##
+     ##  def val(X, t):
+     ##     # Function code
+     ##     return # Return value
+     ##
+     ## where X is a tuple of length geometry dimension.
+     element python {
+        python_code
+     }
+-->

@@ -1,0 +1,151 @@
+include "spud_base.rnc"
+
+start =
+   (
+      element adjoint_sw_sediment {
+         ## Model output files are named according to the project
+         ## name, e.g. [simulation_name]_0.png. Non-standard
+         ## characters in the project name should be avoided.
+         element project_name {
+            anystring
+         },
+         ## Options dealing with the specification of the mesh
+         element mesh {
+            ## The number of elements, default = 20
+            element element_count {
+               integer
+            }?
+         },
+         ## Options dealing with the specification of the time discretisation
+         element time_options {
+            ## time discretisation choice
+            time_discretisation_choice,
+            ## start time, default = 0.0
+            element start_time {
+               real
+            }?,
+            ## timestep
+            element timestep {
+               real
+            },
+            ## adaptive timestep
+            element adaptive_timestep {
+               element adapt_initial_timestep {
+                  empty
+               },
+               element cfl_criteria {
+                  real
+               }
+            }?
+         },
+         element output_options {
+            # plot results
+            element plotting {
+               # plot results as they are calculated
+               element plotting_interval {
+                  real
+               },
+               (
+                  # plot results as they are calculated
+                  element output {
+                     "live_plotting"
+                  }|
+                  # save plots to file
+                  element output {
+                     "save_plots"
+                  }|
+                  # save plots to file
+                  element output {
+                     "both"
+                  }
+               )
+            }?
+         },
+         # spatial discretisation
+         element spatial_discretisation {
+            (
+               # plot results as they are calculated
+               element discretisation {
+                  attribute name { "discontinuous" },
+                  element slope_limit {
+                     empty
+                  }?
+               }|
+               # save plots to file
+               element discretisation {
+                  attribute name { "continuous" }
+               }
+            )
+         },
+         ## Options dealing with the specification of initial conditions
+         element initial_conditions {
+            ## The non-dimensionalised initial length of the current, default=1.0
+            element initial_length {
+               real
+            }?,
+            ## C code for expression describing the initial height of the current, default=1.0
+            element height {
+               anystring
+            }?,
+            ## C code for expression describing the initial momentum of the current, default=0.0
+            element momentum {
+               anystring
+            }?,
+            ## C code for expression describing the initial volume fraction of the current, default=1.0
+            element volume_fraction {
+               anystring
+            }?,
+            ## C code for expression describing the initial deposited sediment, default=0.0
+            element volume_fraction {
+               anystring
+            }?
+         },
+         ## Test specific options - only enable when testing
+         element testing {
+            test_choice
+         }?
+      }
+   )
+
+time_discretisation_choice = 
+   (
+      element time_discretisation {
+         attribute name { "crank_nicholson" }
+      }|
+      element time_discretisation {
+         attribute name { "explicit" }
+      }|
+      element time_discretisation {
+         attribute name { "implicit" }
+      }
+   )
+
+test_choice = 
+   (
+      element test {
+         attribute name { "mms" }
+      }|
+      element test {
+         attribute name { "similarity" }
+      }|
+      element test {
+         attribute name { "dam_break" }
+      }
+   )
+
+
+# input_choice_real_contents =
+#    ## Constant value
+#    element constant {
+#       real
+#    }|
+#    ## Python function prescribing real input. Functions should be of the form:
+#    ##
+#    ##  def val(X, t):
+#    ##     # Function code
+#    ##     return # Return value
+#    ##
+#    ## where X is a tuple of length geometry dimension.
+#    element python {
+#       python_code
+#    }
