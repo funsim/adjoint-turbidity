@@ -32,7 +32,7 @@ start =
             element adaptive_timestep {
                element adapt_initial_timestep {
                   empty
-               },
+               }?,
                element cfl_criteria {
                   real
                }
@@ -48,15 +48,15 @@ start =
                (
                   # plot results as they are calculated
                   element output {
-                     "live_plotting"
+                     attribute name {"live_plotting"}
                   }|
                   # save plots to file
                   element output {
-                     "save_plots"
+                     attribute name {"save_plots"}
                   }|
                   # save plots to file
                   element output {
-                     "both"
+                     attribute name {"both"}
                   }
                )
             }?

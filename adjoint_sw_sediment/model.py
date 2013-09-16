@@ -13,6 +13,8 @@ import numpy as np
 import input_output as io
 from slope_limiting import slope_limit
 from equation import Equation
+import time_discretisation
+from load_options import load_options
 
 ############################################################
 # DOLFIN SETTINGS
@@ -29,17 +31,10 @@ solver_parameters["newton_solver"]["relaxation_parameter"] = 1.0
 info(parameters, False)
 set_log_level(ERROR)
 
-# time discretisations
-def explicit(object, u):
-    return u[1]
-def implicit(object, u):
-    return u[0]
-def runge_kutta(object, u):
-    return u[1]
-def crank_nicholson(object, u):
-    return 0.5*u[0] + 0.5*u[1]
-
 class Model():
+
+    def __init__(self, xml_path):
+        load_options(self, xml_path)
     
     # SIMULAITON USER DEFINED PARAMETERS
 
@@ -54,7 +49,6 @@ class Model():
 
     # time stepping
     t = 0.0
-    timestep = dX_/100.0
     adapt_timestep = True
     adapt_initial_timestep = True
     cfl = Constant(0.2)
@@ -81,8 +75,6 @@ class Model():
 
     # discretisation
     degree = 1
-    disc = "DG"
-    time_discretise = crank_nicholson #implicit #crank_nicholson
     slope_limiter = True
 
     # error calculation
@@ -207,14 +199,6 @@ class Model():
                                          similarity = similarity, dam_break = dam_break, g = g, h_0 = h_0, phi_0 = phi_0)
             self.plot_t = self.t + self.plot
 
-        # write ic's
-        if self.write:
-            io.clear_model_files(file=self.save_loc)
-            io.write_model_to_files(self, 'a', file=self.save_loc)
-            self.write_t = self.write
-
-    def generate_form(self):
-
         # galerkin projection of initial conditions on to w
         test = TestFunction(self.W)
         trial = TrialFunction(self.W)
@@ -229,6 +213,14 @@ class Model():
         # copy to w[2] and w[3] - for intermedaite values in RK scheme
         if self.time_discretise.im_func == runge_kutta:
             self.w[2] = project(self.w[0], self.W)
+
+        # write ic's
+        if self.write:
+            io.clear_model_files(file=self.save_loc)
+            io.write_model_to_files(self, 'a', file=self.save_loc)
+            self.write_t = self.write
+
+    def generate_form(self):
 
         # get time discretised functions
         q = dict()

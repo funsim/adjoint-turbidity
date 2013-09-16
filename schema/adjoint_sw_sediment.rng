@@ -36,9 +36,11 @@ characters in the project name should be avoided.</a:documentation>
         <optional>
           <element name="adaptive_timestep">
             <a:documentation>adaptive timestep</a:documentation>
-            <element name="adapt_initial_timestep">
-              <empty/>
-            </element>
+            <optional>
+              <element name="adapt_initial_timestep">
+                <empty/>
+              </element>
+            </optional>
             <element name="cfl_criteria">
               <ref name="real"/>
             </element>
@@ -56,15 +58,21 @@ characters in the project name should be avoided.</a:documentation>
             <choice>
               <!-- plot results as they are calculated -->
               <element name="output">
-                <value>live_plotting</value>
+                <attribute name="name">
+                  <value>live_plotting</value>
+                </attribute>
               </element>
               <!-- save plots to file -->
               <element name="output">
-                <value>save_plots</value>
+                <attribute name="name">
+                  <value>save_plots</value>
+                </attribute>
               </element>
               <!-- save plots to file -->
               <element name="output">
-                <value>both</value>
+                <attribute name="name">
+                  <value>both</value>
+                </attribute>
               </element>
             </choice>
           </element>
