@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='utf-8'?>
+<adjoint_sw_sediment>
+  <project_name>
+    <string_value lines="1">mms_test</string_value>
+  </project_name>
+  <mesh/>
+  <time_options>
+    <time_discretisation name="crank_nicholson"/>
+    <timestep>
+      <real_value rank="0">1.0</real_value>
+    </timestep>
+    <finish_time>
+      <real_value rank="0">0.1</real_value>
+    </finish_time>
+  </time_options>
+  <output_options/>
+  <spatial_discretisation>
+    <discretisation name="discontinuous"/>
+  </spatial_discretisation>
+  <non_dimensional_numbers>
+    <Fr>
+      <real_value rank="0">1.0</real_value>
+    </Fr>
+    <beta>
+      <real_value rank="0">1.0</real_value>
+    </beta>
+  </non_dimensional_numbers>
+  <initial_conditions>
+    <initial_length>
+      <string_value lines="1">pi</string_value>
+    </initial_length>
+    <height>
+      <python>
+        <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import h
+  return h()</string_value>
+      </python>
+    </height>
+    <momentum>
+      <python>
+        <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import q
+  return q()</string_value>
+      </python>
+    </momentum>
+    <volume_fraction>
+      <python>
+        <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import phi
+  return phi()</string_value>
+      </python>
+    </volume_fraction>
+    <deposit_depth>
+      <python>
+        <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import phi_d
+  return phi_d()</string_value>
+      </python>
+    </deposit_depth>
+    <front_velocity>
+      <python>
+        <string_value type="code" lines="20" language="python">def c_exp():
+  from sw_mms_exp import u_N
+  return u_N()</string_value>
+      </python>
+    </front_velocity>
+  </initial_conditions>
+  <testing>
+    <test name="mms">
+      <source_terms>
+        <height_source>
+          <python>
+            <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import s_h
+  return s_h()</string_value>
+          </python>
+        </height_source>
+        <momentum_source>
+          <python>
+            <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import s_q
+  return s_q()</string_value>
+          </python>
+        </momentum_source>
+        <volume_fraction_source>
+          <python>
+            <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import s_phi
+  return s_phi()</string_value>
+          </python>
+        </volume_fraction_source>
+        <deposit_depth_source>
+          <python>
+            <string_value lines="20" type="code" language="python">def c_exp():
+  from sw_mms_exp import s_phi_d
+  return s_phi_d()</string_value>
+          </python>
+        </deposit_depth_source>
+      </source_terms>
+    </test>
+  </testing>
+</adjoint_sw_sediment>

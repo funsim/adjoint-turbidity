@@ -73,6 +73,7 @@ def slope_limit(f, annotate = True):
                     else:
                         alpha = 0
 
+            print alpha,
             # apply slope limiting
             indices = W.sub(i_eq).dofmap().cell_dofs(b)
             u_i = np.array([arr[index] for index in indices])
@@ -85,6 +86,8 @@ def slope_limit(f, annotate = True):
 
     if annotate:
         annotate_slope_limit(f)
+
+    print ''
 
 def annotate_slope_limit(f):
     # First annotate the equation
@@ -244,7 +247,8 @@ class SlopeRHS(libadjoint.RHS):
                             indices_v = W.sub(i_eq).dofmap().cell_dofs(b-1)
                         except:
                             indices_v = W.sub(i_eq).dofmap().cell_dofs(b+1)
-
+                            
+                    print alpha,
                     # apply slope limiting
                     for d in range(ele_dof):
                         if d == alpha_i:
@@ -256,7 +260,8 @@ class SlopeRHS(libadjoint.RHS):
                             G[indices[d], indices_u[1]] = 0.5*(1 + alpha + d_alpha_uj*(u[1]-u[0]))
                             G[indices[d], indices_u[0]] = 0.5*(1 - alpha + d_alpha_ui*(u[1]-u[0]))
                             G[indices[d], indices_v[0]] = 0.5*(d_alpha_v*u[1] - d_alpha_v*u[0])
-                            G[indices[d], indices_v[1]] = 0.5*(d_alpha_v*u[1] - d_alpha_v*u[0])  
+                            G[indices[d], indices_v[1]] = 0.5*(d_alpha_v*u[1] - d_alpha_v*u[0])
+                            
 
             else:
 
@@ -268,5 +273,7 @@ class SlopeRHS(libadjoint.RHS):
         if hermitian:
             G = G.transpose()
         f.vector()[:] = G.dot(c_arr)
+
+        print ''
 
         return adjlinalg.Vector(f)  

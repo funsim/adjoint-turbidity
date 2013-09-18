@@ -46,6 +46,16 @@ characters in the project name should be avoided.</a:documentation>
             </element>
           </element>
         </optional>
+        <choice>
+          <element name="finish_time">
+            <a:documentation>time marching simulation</a:documentation>
+            <ref name="real"/>
+          </element>
+          <element name="steady_state_tolerance">
+            <a:documentation>steady state simulation - precribe tolerance</a:documentation>
+            <ref name="real"/>
+          </element>
+        </choice>
       </element>
       <element name="output_options">
         <optional>
@@ -55,26 +65,20 @@ characters in the project name should be avoided.</a:documentation>
             <element name="plotting_interval">
               <ref name="real"/>
             </element>
-            <choice>
-              <!-- plot results as they are calculated -->
-              <element name="output">
-                <attribute name="name">
-                  <value>live_plotting</value>
-                </attribute>
+            <ref name="plotting_choice"/>
+            <optional>
+              <element name="dimensionalise_plots">
+                <element name="g_prime">
+                  <ref name="real"/>
+                </element>
+                <element name="h_0">
+                  <ref name="real"/>
+                </element>
+                <element name="phi_0">
+                  <ref name="real"/>
+                </element>
               </element>
-              <!-- save plots to file -->
-              <element name="output">
-                <attribute name="name">
-                  <value>save_plots</value>
-                </attribute>
-              </element>
-              <!-- save plots to file -->
-              <element name="output">
-                <attribute name="name">
-                  <value>both</value>
-                </attribute>
-              </element>
-            </choice>
+            </optional>
           </element>
         </optional>
       </element>
@@ -99,37 +103,69 @@ characters in the project name should be avoided.</a:documentation>
             </attribute>
           </element>
         </choice>
+        <optional>
+          <!-- order of polynomials, default = 1 -->
+          <element name="polynomial_degree">
+            <ref name="integer"/>
+          </element>
+        </optional>
+      </element>
+      <element name="non_dimensional_numbers">
+        <a:documentation>Specify values for non-dimensional parameters</a:documentation>
+        <optional>
+          <element name="Fr">
+            <a:documentation>Current front Froude number, default = 1.19</a:documentation>
+            <ref name="real"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="beta">
+            <a:documentation>Non-dimensional settling velocity, default = 5e-3</a:documentation>
+            <ref name="real"/>
+          </element>
+        </optional>
       </element>
       <element name="initial_conditions">
         <a:documentation>Options dealing with the specification of initial conditions</a:documentation>
         <optional>
           <element name="initial_length">
             <a:documentation>The non-dimensionalised initial length of the current, default=1.0</a:documentation>
-            <ref name="real"/>
+            <ref name="anystring"/>
           </element>
         </optional>
         <optional>
           <element name="height">
-            <a:documentation>C code for expression describing the initial height of the current, default=1.0</a:documentation>
-            <ref name="anystring"/>
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the initial height of the current, default=1.0</a:documentation>
+            <ref name="c_string_choice"/>
           </element>
         </optional>
         <optional>
           <element name="momentum">
-            <a:documentation>C code for expression describing the initial momentum of the current, default=0.0</a:documentation>
-            <ref name="anystring"/>
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the initial momentum of the current, default=0.0</a:documentation>
+            <ref name="c_string_choice"/>
           </element>
         </optional>
         <optional>
           <element name="volume_fraction">
-            <a:documentation>C code for expression describing the initial volume fraction of the current, default=1.0</a:documentation>
-            <ref name="anystring"/>
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the initial volume fraction of the current, default=1.0</a:documentation>
+            <ref name="c_string_choice"/>
           </element>
         </optional>
         <optional>
-          <element name="volume_fraction">
-            <a:documentation>C code for expression describing the initial deposited sediment, default=0.0</a:documentation>
-            <ref name="anystring"/>
+          <element name="deposit_depth">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the initial deposited sediment, default=0.0</a:documentation>
+            <ref name="c_string_choice"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="front_velocity">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the initial frontal velocity, default=0.0</a:documentation>
+            <ref name="c_string_choice"/>
           </element>
         </optional>
       </element>
@@ -141,6 +177,16 @@ characters in the project name should be avoided.</a:documentation>
       </optional>
     </element>
   </start>
+  <define name="c_string_choice">
+    <choice>
+      <element name="c_string">
+        <ref name="anystring"/>
+      </element>
+      <element name="python">
+        <ref name="python_code"/>
+      </element>
+    </choice>
+  </define>
   <define name="time_discretisation_choice">
     <choice>
       <element name="time_discretisation">
@@ -166,6 +212,29 @@ characters in the project name should be avoided.</a:documentation>
         <attribute name="name">
           <value>mms</value>
         </attribute>
+        <element name="source_terms">
+          <a:documentation>Options dealing with the specification of source terms in mms test</a:documentation>
+          <element name="height_source">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the height source term</a:documentation>
+            <ref name="c_string_choice"/>
+          </element>
+          <element name="momentum_source">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the momentum source term</a:documentation>
+            <ref name="c_string_choice"/>
+          </element>
+          <element name="volume_fraction_source">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the volume fraction source term</a:documentation>
+            <ref name="c_string_choice"/>
+          </element>
+          <element name="deposit_depth_source">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the deposit depth source term</a:documentation>
+            <ref name="c_string_choice"/>
+          </element>
+        </element>
       </element>
       <element name="test">
         <attribute name="name">
@@ -179,21 +248,26 @@ characters in the project name should be avoided.</a:documentation>
       </element>
     </choice>
   </define>
+  <define name="plotting_choice">
+    <choice>
+      <!-- plot results as they are calculated -->
+      <element name="output">
+        <attribute name="name">
+          <value>live_plotting</value>
+        </attribute>
+      </element>
+      <!-- save plots to file -->
+      <element name="output">
+        <attribute name="name">
+          <value>save_plots</value>
+        </attribute>
+      </element>
+      <!-- save plots to file -->
+      <element name="output">
+        <attribute name="name">
+          <value>both</value>
+        </attribute>
+      </element>
+    </choice>
+  </define>
 </grammar>
-<!--
-  input_choice_real_contents =
-     ## Constant value
-     element constant {
-        real
-     }|
-     ## Python function prescribing real input. Functions should be of the form:
-     ##
-     ##  def val(X, t):
-     ##     # Function code
-     ##     return # Return value
-     ##
-     ## where X is a tuple of length geometry dimension.
-     element python {
-        python_code
-     }
--->

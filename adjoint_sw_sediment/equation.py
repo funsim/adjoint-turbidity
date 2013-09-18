@@ -84,20 +84,9 @@ class Equation():
             if model.mms:
                 self.F -= model.k*v*u_td*model.n*(model.ds(0) + model.ds(1))
                 self.F += model.k*v*model.w_ic[index]*model.n*(model.ds(0) + model.ds(1)) 
+            # bc term for zero momentum at left boundary
             if index == 0 and not model.mms:
                 self.F -= model.k*v*u_td*model.n*model.ds(0)
-
-            # # stabilisation - untested
-            # if stab((0,0)) > 0.0:
-            #     if index > 0:
-            #         tau = stab*model.dX/smooth_abs(ux)
-            #         self.F += model.k*tau*ux*grad(v)[0]*ux*grad(u_td)[0]*dx - \
-            #             model.k*tau*ux*v*ux*grad(u_td)[0]*model.n*(model.ds(0) + model.ds(1))
-            #     else:
-            #         u = q_td/h_td
-            #         tau = stab*model.dX*(smooth_abs(u)+u+(phi_td_p*h_td_p)**0.5)*h_td
-            #         self.F += model.k*grad(v)[0]*tau*grad(u)[0]*dx
-            #         self.F -= model.k*v*tau*grad(u)[0]*model.n*(model.ds(0) + model.ds(1)) 
 
             # grad term
             if grad_term:

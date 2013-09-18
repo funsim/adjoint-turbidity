@@ -61,7 +61,7 @@ class Plotter():
         
         self.fig = plt.figure(figsize=(12, 12), dpi=200)
         self.fig.subplots_adjust(left = 0.15, wspace = 0.3, hspace = 0.3) 
-        if model.beta_:
+        if model.beta((0,0)):
             self.q_plot = self.fig.add_subplot(221)
             self.h_plot = self.fig.add_subplot(222)
             self.phi_plot = self.fig.add_subplot(223)
@@ -83,13 +83,13 @@ class Plotter():
         
         self.q_plot.clear()
         self.h_plot.clear()
-        if model.beta_:
+        if model.beta((0,0)):
             self.phi_plot.clear()
             self.phi_d_plot.clear()
 
         self.q_plot.set_ylabel(r'$u$')
         self.h_plot.set_ylabel(r'$h$')
-        if model.beta_:
+        if model.beta((0,0)):
             self.phi_plot.set_xlabel(r'$x$')
             self.phi_plot.set_ylabel(r'$\varphi$')
             self.phi_d_plot.set_xlabel(r'$x$')
@@ -99,7 +99,7 @@ class Plotter():
 
         self.q_line, = self.q_plot.plot(y, q/h*(self.g*self.h_0)**0.5, 'r-')
         self.h_line, = self.h_plot.plot(y, h*self.h_0, 'r-')
-        if model.beta_:
+        if model.beta((0,0)):
             self.phi_line, = self.phi_plot.plot(y, phi*self.phi_0, 'r-')
             self.phi_d_line, = self.phi_d_plot.plot(y, phi_d*self.phi_0, 'r-')
 
@@ -136,7 +136,7 @@ class Plotter():
         self.h_plot.set_autoscaley_on(False)
         self.h_plot.set_xlim([0.0,x_lim])
         self.h_plot.set_ylim([0.0,self.h_y_lim]) #h_int.min()*0.9,self.h_y_lim])
-        if model.beta_:
+        if model.beta((0,0)):
             self.phi_plot.set_autoscaley_on(False)
             self.phi_plot.set_xlim([0.0,x_lim])
             self.phi_plot.set_ylim([0.0,self.phi_y_lim])
@@ -273,7 +273,7 @@ def timestep_info_string(model, tex=False):
     phi_cons = 0
     sus = 0
     
-    DX = x_N*model.dX_
+    DX = x_N*model.dX((0,0))
     
     for b in range(n_ele):
         q_indices = model.W.sub(0).dofmap().cell_dofs(b)
@@ -298,7 +298,7 @@ def timestep_info_string(model, tex=False):
         sus += phi_c*DX
 
     if tex:
-        if model.beta_:
+        if model.beta((0,0)):
             return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, model.timestep) +
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}"#, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
                     .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
@@ -307,7 +307,7 @@ def timestep_info_string(model, tex=False):
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}"#, h = {4:.2e}"
                     .format(x_N, u_N, h_N, q_cons, h_cons))
     else:
-        if model.beta_:
+        if model.beta((0,0)):
             return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, model.timestep) +
                 "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}"#, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
                 .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))

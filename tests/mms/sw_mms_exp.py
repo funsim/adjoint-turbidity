@@ -37,4 +37,3 @@ def s_phi():
 def s_phi_d():
 
     return ' 1.2*pow((0.5*cos(1.4*pi) + 1.0), 0.5)*x[0]*cos(x[0])/pi + (0.5*cos(1.4*x[0]) + 1.0)/(sin(2.3*x[0]) + 10.0) '
-
