@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<grammar xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns="http://relaxng.org/ns/structure/1.0">
+<grammar xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="">
   <include href="spud_base.rng"/>
   <start>
     <element name="adjoint_sw_sediment">
@@ -166,6 +166,20 @@ the initial deposited sediment, default=0.0</a:documentation>
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial frontal velocity, default=0.0</a:documentation>
             <ref name="c_string_choice"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="variables">
+            <oneOrMore>
+              <element name="var">
+                <attribute name="name">
+                  <data type="string"/>
+                </attribute>
+                <element name="code">
+                  <ref name="python_code"/>
+                </element>
+              </element>
+            </oneOrMore>
           </element>
         </optional>
       </element>

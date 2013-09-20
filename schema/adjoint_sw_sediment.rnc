@@ -130,6 +130,12 @@ start =
             ## the initial frontal velocity, default=0.0
             element front_velocity {
                c_string_choice
+            }?,
+            element variables {
+               element var {
+                  attribute name { string },
+                  element code { python_code }
+               }+
             }?
          },
          ## Test specific options - only enable when testing

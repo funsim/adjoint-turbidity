@@ -12,15 +12,12 @@ import numpy as np
 import sys
 
 def getError(model):
-    Fq = FunctionSpace(model.mesh, model.disc, model.degree + 2)
-    Fh = FunctionSpace(model.mesh, model.disc, model.degree + 2)
-    Fphi = FunctionSpace(model.mesh, model.disc, model.degree + 2)
-    Fphi_d = FunctionSpace(model.mesh, model.disc, model.degree + 2)
+    V = FunctionSpace(model.mesh, model.disc, model.degree + 2)
 
-    S_q = project(Expression(mms.q(), degree=5), Fq)
-    S_h = project(Expression(mms.h(), degree=5), Fh)
-    S_phi = project(Expression(mms.phi(), degree=5), Fphi)
-    S_phi_d = project(Expression(mms.phi_d(), degree=5), Fphi_d)
+    S_q = project(Expression(mms.q(), degree=5), V)
+    S_h = project(Expression(mms.h(), degree=5), V)
+    S_phi = project(Expression(mms.phi(), degree=5), V)
+    S_phi_d = project(Expression(mms.phi_d(), degree=5), V)
 
     q, h, phi, phi_d, x_N, u_N = model.w[0].split()
     Eh = errornorm(h, S_h, norm_type="L2", degree_rise=2)

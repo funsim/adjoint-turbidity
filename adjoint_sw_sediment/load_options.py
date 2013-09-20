@@ -96,6 +96,15 @@ def load_options(model, xml_path):
         get_optional(option_path + 'initial_length', default = '1.0'),
         read_ic(option_path + 'front_velocity', default = '0.0'),
         )
+    model.w_ic_var = ''
+    if (libspud.have_option(option_path + 'variables') and 
+        libspud.option_count(option_path + 'variables/var') > 0):
+        n_var = libspud.option_count(option_path + 'variables/var')
+        for i_var in range(n_var):
+            name = libspud.get_child_name(option_path + 'variables/', i_var)
+            var = name.split(':')[-1]
+            code = libspud.get_option('initial_conditions/variables/'+name+'/code')
+            model.w_ic_var = model.w_ic_var + var + ' = ' + code + ', '
 
     # boundary conditions
     
@@ -126,6 +135,6 @@ def read_ic(path, default):
             exec py_code
             return c_exp()
         else:
-            return libspud.get_option(path + '/c_code')
+            return libspud.get_option(path + '/c_string')
     else:
         return default        

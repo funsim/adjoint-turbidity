@@ -42,8 +42,10 @@ class Model():
         # error calculation
         self.error_callback = None
 
-    def run(self, ic = None, annotate = True):
+        # initialise function spaces
         self.initialise_function_spaces()
+
+    def run(self, ic = None, annotate = True):
         self.set_ic(ic = ic)
         self.generate_form()
         return self.solve(annotate = annotate)
@@ -73,49 +75,45 @@ class Model():
         self.ds = Measure("ds")[exterior_facet_domains] 
 
         # define function spaces
-        self.q_FS = FunctionSpace(self.mesh, self.disc, self.degree)
-        self.h_FS = FunctionSpace(self.mesh, self.disc, self.degree)
-        self.phi_FS = FunctionSpace(self.mesh, self.disc, self.degree)
-        self.phi_d_FS = FunctionSpace(self.mesh, self.disc, self.degree)
-        self.var_N_FS = FunctionSpace(self.mesh, "R", 0)
-        self.W = MixedFunctionSpace([self.q_FS, self.h_FS, self.phi_FS, self.phi_d_FS, self.var_N_FS, self.var_N_FS])
-        self.y_FS = FunctionSpace(self.mesh, self.disc, self.degree)
+        self.V = FunctionSpace(self.mesh, self.disc, self.degree)
+        self.R = FunctionSpace(self.mesh, "R", 0)
+        self.W = MixedFunctionSpace([self.V, self.V, self.V, self.V, self.R, self.R])
+
+        # define linear function space
+        self.V_CG = FunctionSpace(self.mesh, 'CG', self.degree)
+        self.R_CG = FunctionSpace(self.mesh, "R", 0)
+        self.W_CG = MixedFunctionSpace([self.V_CG, self.V_CG, self.V_CG, self.V_CG, self.R_CG, self.R_CG])
 
         # define test functions
         (self.q_tf, self.h_tf, self.phi_tf, self.phi_d_tf, self.x_N_tf, self.u_N_tf) = TestFunctions(self.W)
         self.v = TestFunction(self.W)
 
         # initialise functions
-        y_exp = project(Expression('x[0]'), self.y_FS)
+        y_exp = project(Expression('x[0]'), self.V)
         self.y = Function(y_exp, name='y')
         self.w = dict()
         self.w[0] = Function(self.W, name='U')
         self.w[1] = Function(self.W, name='U_1')
 
+        # create ic expression
+        exp_str = 'self.w_ic_e = Expression(self.w_ic_e, self.W.ufl_element(), ' + self.w_ic_var + ')'
+        exec exp_str in globals(), locals()
+
     def set_ic(self, ic = None):
 
         # set time to initial t
         self.t = self.start_time
-
-        # create expression from c strings
-        self.w_ic = project((Expression(self.w_ic_e, self.W.ufl_element())), self.W)  
-        # if ic == None:
-        #     # create expression from c strings
-        #     self.w_ic = project((Expression(self.w_ic_e, self.W.ufl_element())), self.W)  
-        # else:
-        #     self.w_ic = ic
+        
+        if ic == None:
+            self.w_ic = self.w_ic_e
+        else:
+            self.w_ic = ic
 
         # galerkin projection of initial conditions on to w[0] and w[1]
         test = TestFunction(self.W)
         trial = TrialFunction(self.W)
-        L = 0; a = 0
-        for i in range(len(self.w_ic)):
-            if i == 0 and ic:
-                a += inner(test[i], trial[i])*dx
-                L += inner(test[i], ic)*dx
-            else:
-                a += inner(test[i], trial[i])*dx
-                L += inner(test[i], self.w_ic[i])*dx
+        a = inner(test, trial)*dx
+        L = inner(test, self.w_ic)*dx
         solve(a == L, self.w[0])
         solve(a == L, self.w[1])
 
@@ -143,9 +141,9 @@ class Model():
 
         # define adaptive timestep form
         if self.adapt_timestep:
-            self.k = project(Expression(str(self.timestep)), self.var_N_FS)
-            self.k_tf = TestFunction(self.var_N_FS)
-            self.k_trf = TrialFunction(self.var_N_FS)
+            self.k = project(Expression(str(self.timestep)), self.R)
+            self.k_tf = TestFunction(self.R)
+            self.k_trf = TrialFunction(self.R)
             self.a_k = self.k_tf*self.k_trf*dx 
             self.L_k = self.k_tf*(x_N[0]*self.dX)/u_N[0]*self.adapt_cfl*dx
         else:

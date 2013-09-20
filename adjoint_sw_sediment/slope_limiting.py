@@ -73,7 +73,6 @@ def slope_limit(f, annotate = True):
                     else:
                         alpha = 0
 
-            print alpha,
             # apply slope limiting
             indices = W.sub(i_eq).dofmap().cell_dofs(b)
             u_i = np.array([arr[index] for index in indices])
@@ -86,8 +85,6 @@ def slope_limit(f, annotate = True):
 
     if annotate:
         annotate_slope_limit(f)
-
-    print ''
 
 def annotate_slope_limit(f):
     # First annotate the equation
@@ -247,8 +244,7 @@ class SlopeRHS(libadjoint.RHS):
                             indices_v = W.sub(i_eq).dofmap().cell_dofs(b-1)
                         except:
                             indices_v = W.sub(i_eq).dofmap().cell_dofs(b+1)
-                            
-                    print alpha,
+
                     # apply slope limiting
                     for d in range(ele_dof):
                         if d == alpha_i:
@@ -273,7 +269,5 @@ class SlopeRHS(libadjoint.RHS):
         if hermitian:
             G = G.transpose()
         f.vector()[:] = G.dot(c_arr)
-
-        print ''
 
         return adjlinalg.Vector(f)  

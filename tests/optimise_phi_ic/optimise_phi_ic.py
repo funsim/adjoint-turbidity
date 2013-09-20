@@ -10,25 +10,6 @@ from optparse import OptionParser
 import numpy as np
 import sys
 
-parser = OptionParser()
-usage = (
-'''usage: %prog [options]
-''')
-parser = OptionParser(usage=usage)
-parser.add_option('-t', '--adjoint_test',
-                  action='store_true', dest='adjoint_test', default=False,
-                  help='test adjoint solution')
-parser.add_option('-T', '--end_time',
-                  dest='T', type=float, default=10.0,
-                  help='simulation end time')
-parser.add_option('-p', '--plot',
-                  dest='plot', type=float, default=None,
-                  help='plot results, provide time between plots')
-parser.add_option('-s', '--save_plot',
-                  dest='save_plot', action='store_true', default=False,
-                  help='save plots')
-(options, args) = parser.parse_args()
-
 # CLEAN UP
 input_output.clear_file('phi_ic_adj.json')
 input_output.clear_file('h_ic_adj.json')
@@ -37,40 +18,40 @@ input_output.clear_file('q_ic_adj.json')
 j_log = []
 
 # GET MODEL
-model = Model()
+model = Model('optimise_phi_ic.asml')
+set_log_level(ERROR)
 
-# Model parameters
-model.dX_ = 2.0e-2
-model.timestep = model.dX_*5.0
-model.adapt_timestep = False
-model.adapt_initial_timestep = False
+# INITIAL CONDITIONS
+# if options.adjoint_test:
+#     phi_ic = input_output.create_function_from_file('phi_ic_adj_latest.json', ic_V)
+# else:
+phi_ic = project(Expression('1.0'), FunctionSpace(model.mesh, 'CG', 1))
 
-# Plotting
-if options.plot:
-    model.plot = options.plot
-model.show_plot = not options.save_plot
-adj_plotter = input_output.Adjoint_Plotter('results/adj_', True, True, target=True) 
-
-# INITIALISE
-model.initialise_function_spaces()
-
-# ic
-ic_V = FunctionSpace(model.mesh, "CG", 1)
-if options.adjoint_test:
-    phi_ic = input_output.create_function_from_file('phi_ic_adj_latest.json', ic_V)
-else:
-    phi_ic = project(Expression('1.0'), ic_V)
+w_ic = Function(model.W)
+test = TestFunction(model.W)
+trial = TrialFunction(model.W)
+a = 0
+L = 0
+for i in range(len(model.w_ic_e)):
+    if i != 2:
+        a += inner(test[i], trial[i])*dx
+        L += inner(test[i], model.w_ic_e[i])*dx
+    else:
+        a += inner(test[i], trial[i])*dx
+        L += inner(test[i], phi_ic)*dx
+solve(a == L, w_ic)
 
 # INITIAL FORWARD RUN
-model.setup(phi_ic = phi_ic)
-model.solve(T = options.T)
+model.set_ic(ic = w_ic)
+model.generate_form()
+model.solve()
 
 # DEFINE FUNCTIONAL
 (q, h, phi, phi_d, x_N, u_N) = split(model.w[0])
 
 # get target data
-phi_d_aim = input_output.create_function_from_file('deposit_data.json', model.phi_d_FS)
-x_N_aim = input_output.create_function_from_file('runout_data.json', model.var_N_FS)
+phi_d_aim = input_output.create_function_from_file('deposit_data.json', model.V)
+x_N_aim = input_output.create_function_from_file('runout_data.json', model.R)
 
 # form functional integrals
 int_0_scale = Constant(1)
@@ -92,8 +73,8 @@ reg_scale.assign(reg_scale_base)
 scaling = Constant(1e-1)  # 1e0 t=5.0, 1e-1 t=10.0
 J = Functional(scaling*(int_0 + int_1)*dt[FINISH_TIME] + int_reg*dt[START_TIME])
 
-if options.adjoint_test:
-    test_ic()
+# if options.adjoint_test:
+#     test_ic()
 
 # RF CALLBACKS
 first_replay = True
@@ -111,7 +92,7 @@ def replay_cb(fwd_var, output_data, value):
 
         # record ic
         global cb_phi_ic
-        value_project = project(value, model.phi_FS, annotate=False)
+        value_project = project(value, model.V, annotate=False)
         cb_phi_ic = value_project.vector().array()
         phi = cb_phi_ic.copy()
         for i in range(len(model.mesh.cells())):
@@ -161,17 +142,17 @@ adj_html("adjoint.html", "adjoint")
 
 m_opt = minimize(reduced_functional, method = "L-BFGS-B", 
                  options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
-                 bounds = bounds,
-                 in_euclidian_space = False) 
+                 bounds = bounds)# ,
+                 # in_euclidian_space = False) 
 
 # IC TEST FUNCTION
 def test_ic():
 
-    g = Function(model.phi_FS)
-    reg = Function(model.phi_FS)
+    g = Function(model.V)
+    reg = Function(model.V)
     
-    trial = TrialFunction(model.phi_FS)
-    test = TestFunction(model.phi_FS)
+    trial = TrialFunction(model.V)
+    test = TestFunction(model.V)
     a = inner(test, trial)*dx
     
     L_g = inner(test, int)*dx  
