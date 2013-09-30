@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<adjoint_sw_sediment>
+  <project_name>
+    <string_value lines="1">similarity</string_value>
+  </project_name>
+  <mesh>
+    <element_count>
+      <integer_value rank="0">16</integer_value>
+    </element_count>
+  </mesh>
+  <time_options>
+    <time_discretisation name="crank_nicholson"/>
+    <timestep>
+      <real_value rank="0">0.0015625</real_value>
+    </timestep>
+    <finish_time>
+      <real_value rank="0">1.0</real_value>
+    </finish_time>
+  </time_options>
+  <output_options>
+    <plotting>
+      <plotting_interval>
+        <real_value rank="0">0.1</real_value>
+      </plotting_interval>
+      <output name="live_plotting"/>
+    </plotting>
+  </output_options>
+  <spatial_discretisation>
+    <discretisation name="discontinuous">
+      <slope_limit/>
+    </discretisation>
+  </spatial_discretisation>
+  <non_dimensional_numbers>
+    <beta>
+      <real_value rank="0">0.0</real_value>
+    </beta>
+  </non_dimensional_numbers>
+  <initial_conditions/>
+</adjoint_sw_sediment>

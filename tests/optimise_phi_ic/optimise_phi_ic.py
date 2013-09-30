@@ -19,7 +19,9 @@ j_log = []
 
 # GET MODEL
 model = Model('optimise_phi_ic.asml')
-set_log_level(ERROR)
+set_log_level(PROGRESS)
+
+adj_plotter = input_output.Adjoint_Plotter(model.project_name, True, True, target=True)
 
 # INITIAL CONDITIONS
 # if options.adjoint_test:
