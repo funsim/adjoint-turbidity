@@ -99,6 +99,20 @@ class Model():
         exp_str = 'self.w_ic_e = Expression(self.w_ic_e, self.W.ufl_element(), ' + self.w_ic_var + ')'
         exec exp_str in globals(), locals()
 
+    def create_ic(self, value_dict):
+        
+        w_ic = Function(model.W)
+        test = TestFunction(model.W)
+        trial = TrialFunction(model.W)
+        a = 0
+        L = 0
+        for i, optimise in enumerate(self.optimised_ic):
+            a += inner(test[i], trial[i])*dx
+            if optimise['optimised']:
+                L += inner(test[i], value_dict[optimised['id']])*dx
+            else:
+                L += inner(test[i], self.w_ic_e[i])*dx
+
     def set_ic(self, ic = None):
 
         # set time to initial t

@@ -105,6 +105,20 @@ def load_options(model, xml_path):
             var = name.split(':')[-1]
             code = libspud.get_option('initial_conditions/variables/'+name+'/code')
             model.w_ic_var = model.w_ic_var + var + ' = ' + code + ', '
+    model.optimised_ic = (
+        {'id':'momentum', 
+         'optimised':libspud.have_option(option_path + 'momentum/optimised')}, 
+        {'id':'height', 
+         'optimised':libspud.have_option(option_path + 'height/optimised')}, 
+        {'id':'volume_fraction', 
+         'optimised':libspud.have_option(option_path + 'volume_fraction/optimised')}, 
+        {'id':'deposit_depth', 
+         'optimised':libspud.have_option(option_path + 'deposit_depth/optimised')}, 
+        {'id':'initial_length',
+         'optimised': libspud.have_option(option_path + 'initial_length/optimised')} 
+        {'id':'front_velocity', 
+         'optimised':libspud.have_option(option_path + 'front_velocity/optimised')}, 
+        )
 
     # boundary conditions
     

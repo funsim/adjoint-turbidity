@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<adjoint_sw_sediment>
+  <project_name>
+    <string_value lines="1">optimise_phi_ic</string_value>
+  </project_name>
+  <mesh>
+    <element_count>
+      <integer_value rank="0">50</integer_value>
+    </element_count>
+  </mesh>
+  <time_options>
+    <time_discretisation name="crank_nicholson"/>
+    <timestep>
+      <real_value rank="0">5e-2</real_value>
+    </timestep>
+    <finish_time>
+      <real_value rank="0">2.0</real_value>
+    </finish_time>
+  </time_options>
+  <output_options/>
+  <spatial_discretisation>
+    <discretisation name="discontinuous">
+      <slope_limit/>
+    </discretisation>
+  </spatial_discretisation>
+  <non_dimensional_numbers/>
+  <initial_conditions>
+    <volume_fraction>
+      <c_string>
+        <string_value lines="1">1.0 - 0.1*cos(pi*x[0])</string_value>
+      </c_string>
+    </volume_fraction>
+  </initial_conditions>
+</adjoint_sw_sediment>

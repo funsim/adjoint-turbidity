@@ -104,32 +104,38 @@ start =
          element initial_conditions {
             ## The non-dimensionalised initial length of the current, default=1.0
             element initial_length {
-               anystring
+               anystring,
+               element optimised { empty }?
             }?,
             ## C code, or python that returns C code as a string, for expression describing 
             ## the initial height of the current, default=1.0
             element height {
-               c_string_choice
+               c_string_choice,
+               element optimised { empty }?
             }?,
             ## C code, or python that returns C code as a string, for expression describing 
             ## the initial momentum of the current, default=0.0
             element momentum {
-               c_string_choice
+               c_string_choice,
+               element optimised { empty }?
             }?,
             ## C code, or python that returns C code as a string, for expression describing 
             ## the initial volume fraction of the current, default=1.0
             element volume_fraction {
-               c_string_choice
+               c_string_choice,
+               element optimised { empty }?
             }?,
             ## C code, or python that returns C code as a string, for expression describing 
             ## the initial deposited sediment, default=0.0
             element deposit_depth {
-               c_string_choice
+               c_string_choice,
+               element optimised { empty }?
             }?,
             ## C code, or python that returns C code as a string, for expression describing 
             ## the initial frontal velocity, default=0.0
             element front_velocity {
-               c_string_choice
+               c_string_choice,
+               element optimised { empty }?
             }?,
             element variables {
                element var {

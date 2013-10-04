@@ -79,33 +79,28 @@ J = Functional(scaling*(int_0 + int_1)*dt[FINISH_TIME] + int_reg*dt[START_TIME])
 #     test_ic()
 
 # RF CALLBACKS
-first_replay = True
 def replay_cb(fwd_var, output_data, value):
 
-    global first_replay
-    if first_replay == True:
-        # print timings
-        try:
-            print "* * * Adjoint and optimiser time taken = {}".format(toc())
-        except:
-            pass
-        print "* * * Computing forward model"
-        tic()
+    # print timings
+    try:
+        print "* * * Adjoint and optimiser time taken = {}".format(toc())
+    except:
+        pass
+    print "* * * Computing forward model"
+    tic()
 
-        # record ic
-        global cb_phi_ic
-        value_project = project(value, model.V, annotate=False)
-        cb_phi_ic = value_project.vector().array()
-        phi = cb_phi_ic.copy()
-        for i in range(len(model.mesh.cells())):
-            j = i*2
-            phi[j] = cb_phi_ic[-(j+2)]
-            phi[j+1] = cb_phi_ic[-(j+1)]
-        cb_phi_ic = phi
-        input_output.write_array_to_file('phi_ic_adj_latest.json',cb_phi_ic,'w')
-        input_output.write_array_to_file('phi_ic_adj.json',cb_phi_ic,'a')
-
-        first_replay = False
+    # record ic
+    global cb_phi_ic
+    value_project = project(value, model.V, annotate=False)
+    cb_phi_ic = value_project.vector().array()
+    phi = cb_phi_ic.copy()
+    for i in range(len(model.mesh.cells())):
+        j = i*2
+        phi[j] = cb_phi_ic[-(j+2)]
+        phi[j+1] = cb_phi_ic[-(j+1)]
+    cb_phi_ic = phi
+    input_output.write_array_to_file('phi_ic_adj_latest.json',cb_phi_ic,'w')
+    input_output.write_array_to_file('phi_ic_adj.json',cb_phi_ic,'a')
 
     # get var
     global cb_var
