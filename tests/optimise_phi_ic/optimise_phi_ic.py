@@ -28,25 +28,16 @@ phi_d_aim = input_output.create_function_from_file('deposit_data.json', model.V)
 x_N_aim = input_output.create_function_from_file('runout_data.json', model.R)
 
 # form functional integrals
-int_0_scale = Constant(1)
-int_1_scale = Constant(1)
-int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*int_0_scale*dx
-int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*int_1_scale*dx
-
-# determine scaling
-int_0_scale.assign(1e-0/assemble(int_0))
-int_1_scale.assign(1e-2/assemble(int_1))
+int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*dx
+int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*dx
 
 # functional regularisation
-reg_scale = Constant(1)
+reg_scale = Constant(1e-3)  # 1e-2 t=10
 int_reg = inner(grad(phi), grad(phi))*reg_scale*dx
-reg_scale_base = 1e-3       # 1e-2 for t=10.0
-reg_scale.assign(reg_scale_base)
 
 # functional
-scaling = Constant(1e-1)  # 1e0 t=5.0, 1e-1 t=10.0
-functional_start = int_reg
-functional_end = scaling*(int_0 + int_1)
+functional_start = [[int_reg, None]]
+functional_end = [[int_0, 1e-0], [int_1, 1e-1]] 
 
 # ----------------------------------------------------------------------------------------------------
 # OPTIMISE
@@ -61,9 +52,8 @@ for i, override in enumerate(model.override_ic):
             p = project(model.w_ic_e[i], FunctionSpace(model.mesh, 'R', 0), name='ic_' + override['id'])
         parameters.append(InitialConditionParameter(p))
 
-reduced_functional = MyReducedFunctional(model, functional_start, functional_end, parameters)
-bounds = [[0.5], 
-          [1.5]]
+reduced_functional = MyReducedFunctional(model, functional_start, functional_end, parameters, dump_ic=True)
+bounds = [0.5,1.5]
 
 adj_html("forward.html", "forward")
 adj_html("adjoint.html", "adjoint")
