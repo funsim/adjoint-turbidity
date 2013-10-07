@@ -105,19 +105,25 @@ def load_options(model, xml_path):
             var = name.split(':')[-1]
             code = libspud.get_option('initial_conditions/variables/'+name+'/code')
             model.w_ic_var = model.w_ic_var + var + ' = ' + code + ', '
-    model.optimised_ic = (
+    model.override_ic = (
         {'id':'momentum', 
-         'optimised':libspud.have_option(option_path + 'momentum/optimised')}, 
+         'override':libspud.have_option(option_path + 'momentum/override'), 
+         'FS':'CG'}, 
         {'id':'height', 
-         'optimised':libspud.have_option(option_path + 'height/optimised')}, 
+         'override':libspud.have_option(option_path + 'height/override'), 
+         'FS':'CG'}, 
         {'id':'volume_fraction', 
-         'optimised':libspud.have_option(option_path + 'volume_fraction/optimised')}, 
+         'override':libspud.have_option(option_path + 'volume_fraction/override'), 
+         'FS':'CG'}, 
         {'id':'deposit_depth', 
-         'optimised':libspud.have_option(option_path + 'deposit_depth/optimised')}, 
+         'override':libspud.have_option(option_path + 'deposit_depth/override'), 
+         'FS':'CG'}, 
         {'id':'initial_length',
-         'optimised': libspud.have_option(option_path + 'initial_length/optimised')} 
+         'override': libspud.have_option(option_path + 'initial_length/override'), 
+         'FS':'R'},
         {'id':'front_velocity', 
-         'optimised':libspud.have_option(option_path + 'front_velocity/optimised')}, 
+         'override':libspud.have_option(option_path + 'front_velocity/override'), 
+         'FS':'R'}, 
         )
 
     # boundary conditions

@@ -132,7 +132,7 @@ characters in the project name should be avoided.</a:documentation>
             <a:documentation>The non-dimensionalised initial length of the current, default=1.0</a:documentation>
             <ref name="anystring"/>
             <optional>
-              <element name="optimised">
+              <element name="override">
                 <empty/>
               </element>
             </optional>
@@ -144,7 +144,7 @@ characters in the project name should be avoided.</a:documentation>
 the initial height of the current, default=1.0</a:documentation>
             <ref name="c_string_choice"/>
             <optional>
-              <element name="optimised">
+              <element name="override">
                 <empty/>
               </element>
             </optional>
@@ -156,7 +156,7 @@ the initial height of the current, default=1.0</a:documentation>
 the initial momentum of the current, default=0.0</a:documentation>
             <ref name="c_string_choice"/>
             <optional>
-              <element name="optimised">
+              <element name="override">
                 <empty/>
               </element>
             </optional>
@@ -168,7 +168,7 @@ the initial momentum of the current, default=0.0</a:documentation>
 the initial volume fraction of the current, default=1.0</a:documentation>
             <ref name="c_string_choice"/>
             <optional>
-              <element name="optimised">
+              <element name="override">
                 <empty/>
               </element>
             </optional>
@@ -180,7 +180,7 @@ the initial volume fraction of the current, default=1.0</a:documentation>
 the initial deposited sediment, default=0.0</a:documentation>
             <ref name="c_string_choice"/>
             <optional>
-              <element name="optimised">
+              <element name="override">
                 <empty/>
               </element>
             </optional>
@@ -192,7 +192,7 @@ the initial deposited sediment, default=0.0</a:documentation>
 the initial frontal velocity, default=0.0</a:documentation>
             <ref name="c_string_choice"/>
             <optional>
-              <element name="optimised">
+              <element name="override">
                 <empty/>
               </element>
             </optional>

@@ -29,7 +29,6 @@
       <c_string>
         <string_value lines="1">1.0 - 0.1*cos(pi*x[0])</string_value>
       </c_string>
-      <override/>
     </volume_fraction>
   </initial_conditions>
 </adjoint_sw_sediment>

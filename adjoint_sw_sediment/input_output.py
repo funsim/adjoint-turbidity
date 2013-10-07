@@ -255,9 +255,9 @@ def write_model_to_files(model, method, file):
 def print_timestep_info(model, delta):
     
     if delta < 1e10:
-        info_green("\nEND OF TIMESTEP " + timestep_info_string(model) + " dw = {:.2e}\n".format(delta))
+        info_green("END OF TIMESTEP " + timestep_info_string(model) + " dw = {:.2e}\n".format(delta))
     else:
-        info_green("\nEND OF TIMESTEP " + timestep_info_string(model))
+        info_green("END OF TIMESTEP " + timestep_info_string(model))
 
 def timestep_info_string(model, tex=False):
 

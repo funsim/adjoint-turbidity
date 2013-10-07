@@ -44,14 +44,10 @@ class Model():
 
         # initialise function spaces
         self.initialise_function_spaces()
-
-    def run(self, ic = None, annotate = True):
-        self.set_ic(ic = ic)
         self.generate_form()
-        return self.solve(annotate = annotate)
 
-    def rerun(self, ic = None, annotate = True):
-        self.set_ic(ic = ic)
+    def run(self, ic_dict = None, annotate = True):
+        self.set_ic(ic_dict = ic_dict)
         return self.solve(annotate = annotate)
 
     def initialise_function_spaces(self):
@@ -89,8 +85,7 @@ class Model():
         self.v = TestFunction(self.W)
 
         # initialise functions
-        y_exp = project(Expression('x[0]'), self.V)
-        self.y = Function(y_exp, name='y')
+        self.y = Function(self.V, name='y')
         self.w = dict()
         self.w[0] = Function(self.W, name='U')
         self.w[1] = Function(self.W, name='U_1')
@@ -99,35 +94,32 @@ class Model():
         exp_str = 'self.w_ic_e = Expression(self.w_ic_e, self.W.ufl_element(), ' + self.w_ic_var + ')'
         exec exp_str in globals(), locals()
 
-    def create_ic(self, value_dict):
-        
-        w_ic = Function(model.W)
-        test = TestFunction(model.W)
-        trial = TrialFunction(model.W)
-        a = 0
-        L = 0
-        for i, optimise in enumerate(self.optimised_ic):
-            a += inner(test[i], trial[i])*dx
-            if optimise['optimised']:
-                L += inner(test[i], value_dict[optimised['id']])*dx
-            else:
-                L += inner(test[i], self.w_ic_e[i])*dx
-
-    def set_ic(self, ic = None):
+    def set_ic(self, ic_dict = None):
 
         # set time to initial t
         self.t = self.start_time
-        
-        if ic == None:
-            self.w_ic = self.w_ic_e
-        else:
-            self.w_ic = ic
 
-        # galerkin projection of initial conditions on to w[0] and w[1]
+        # create y
+        y_exp = project(Expression('x[0]'), self.V)
+        self.y.assign(y_exp)
+        
+        w_ic = Function(self.W)
         test = TestFunction(self.W)
         trial = TrialFunction(self.W)
-        a = inner(test, trial)*dx
-        L = inner(test, self.w_ic)*dx
+        a = 0
+        L = 0
+        for i, override in enumerate(self.override_ic):
+            a += inner(test[i], trial[i])*dx
+            if override['override']:
+                try:
+                    L += inner(test[i], ic_dict[override['id']])*dx
+                except:
+                    sys.exit('You have specified to override ic for ' + 
+                             override['id'] + ' but have not supplied a suitable function ' +
+                             'in the ic dictionary')
+            else:
+                L += inner(test[i], self.w_ic_e[i])*dx
+
         solve(a == L, self.w[0])
         solve(a == L, self.w[1])
 
@@ -239,8 +231,6 @@ class Model():
             io.write_model_to_files(self, 'a', file=self.project_name)
             self.write_t = self.write
 
-        tic()
-
         delta = 1e10
         while not (time_finish(self.t) or converged(delta)):
             
@@ -284,9 +274,6 @@ class Model():
 
             # write timestep info
             io.print_timestep_info(self, delta)
-
-        print "\n* * * Initial forward run finished: time taken = {}".format(toc())
-        list_timings(True)
 
         if self.plot:
             self.plotter.clean_up()

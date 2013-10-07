@@ -9,7 +9,7 @@ from adjoint_sw_sediment import *
 import numpy as np
 import sys
 
-model = Model('optimise_phi_ic.asml')
+model = Model('generate_phi_ic.asml')
 model.set_ic()
 
 y, q, h, phi, phi_d, x_N, u_N = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
