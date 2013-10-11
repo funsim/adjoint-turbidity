@@ -11,6 +11,10 @@ mpl.rcParams['text.usetex']=True
 mpl.rcParams['text.latex.unicode']=True
 plt.rc('font',**{'family':'serif','serif':['cm']})
 
+# NOTE ON FUNCTION SPACES AND ARRAYS
+# for input / output all data is stored in arrays as P1DG as defined in 
+# map_to_arrays
+
 def similarity_u(model, y):
     K = (27*model.Fr_**2.0/(12-2*model.Fr_**2.0))**(1./3.)
     return (2./3.)*K*model.t**(-1./3.)*y
@@ -154,73 +158,96 @@ class Plotter():
 
 class Adjoint_Plotter():
 
-    def __init__(self, file, show, save, target):
+    # targe phi options
+    target_ic = {
+        'phi':None,
+        }
 
-        self.save_loc = file
-        self.show = show
-        self.save = save
-        self.target = target
+    # targe deposition options
+    target_ec = {
+        'phi_d':None,
+        'x':None,
+        }
 
-        if self.show:
+    # target deposition
+    options = {
+        'figsize':(11,6),
+        'dpi':200,
+        'save_loc':'results/',
+        'show':True,
+        'save':False,
+        'target_ic':target_ic,
+        'target_ec':target_ec,
+        }
+
+    def __init__(self, options = None):
+
+        if options:
+            self.options = options
+
+        if self.options['show']:
             plt.ion()
-
-        if self.target:
-            f = open('phi_ic.json','r')
-            self.target_phi = np.array(json.loads(f.readline()))
-            f = open('deposit_data.json','r')
-            self.target_phi_d = np.array(json.loads(f.readline()))
-            f = open('runout_data.json','r')
-            self.target_x = json.loads(f.readline())
         
-        self.j = []
-        
-        self.fig = plt.figure(figsize=(6, 4), dpi=200)
+        self.fig = plt.figure(figsize=self.options['figsize'], dpi=self.options['dpi'])
         # self.fig.tight_layout()
         self.fig.subplots_adjust(left = 0.1, wspace = 0.4)  
-        self.phi_plot = self.fig.add_subplot(131)
-        self.phi_d_plot = self.fig.add_subplot(132)
-        self.j_plot = self.fig.add_subplot(133) 
+        self.ic_plot = self.fig.add_subplot(221)
+        self.ec_plot = self.fig.add_subplot(222)
+        self.j_plot = self.fig.add_subplot(223) 
+        self.dj_plot = self.fig.add_subplot(224) 
 
-    def update_plot(self, phi_ic, phi_d, x, x_N, j):  
+    def update_plot(self, ic, model, j_arr, dj):  
         
-        self.phi_plot.clear()
-        self.phi_d_plot.clear()
-        self.j_plot.clear()
+        # ic and dj arrive as P1CG function - convert to input/output format
+        ic_io = map_function_to_array(ic, model.mesh)
+        dj_io = map_function_to_array(dj, model.mesh)
 
-        self.phi_plot.set_xlabel(r'$x$')
-        self.phi_plot.set_ylabel(r'$\varphi$ (START)')
-        self.phi_d_plot.set_xlabel(r'$x$')
-        self.phi_d_plot.set_ylabel(r'$\eta$ (END)')
+        self.ic_plot.clear()
+        self.ec_plot.clear()
+        self.j_plot.clear()
+        self.dj_plot.clear()
+
+        self.ic_plot.set_xlabel(r'$x$')
+        self.ic_plot.set_ylabel(r'$\varphi$ (START)')
+        self.ec_plot.set_xlabel(r'$x$')
+        self.ec_plot.set_ylabel(r'$\eta$ (END)')
         self.j_plot.set_xlabel(r'iterations')
         self.j_plot.set_ylabel(r'$J$')
+        self.dj_plot.set_xlabel(r'$x$')
+        self.dj_plot.set_ylabel(r'$\partial J \over \partial \varphi$')
 
-        if self.target:
-            self.target_phi_line, = self.phi_plot.plot(x, self.target_phi, 'r-')
-            self.target_phi_d_line, = self.phi_d_plot.plot(x*self.target_x[0], self.target_phi_d, 'r-')
+        y, q, h, phi, phi_d, x_N, u_N = map_to_arrays(model.w[0], model.y, model.mesh) 
 
-        self.phi_line, = self.phi_plot.plot(x, phi_ic, 'b-')
-        self.phi_d_line, = self.phi_d_plot.plot(x*x_N, phi_d, 'b-')
+        if self.options['target_ic']['phi'] is not None:
+            self.target_phi_line, = self.ic_plot.plot(y, 
+                                                      self.options['target_ic']['phi'], 'r-')
+        if self.options['target_ec']['phi_d'] is not None:
+            self.target_phi_d_line, = self.ec_plot.plot(y*self.options['target_ec']['x'], 
+                                                        self.options['target_ec']['phi_d'], 'r-')
 
-        self.j.append(j)
-        if all(e > 0.0 for e in self.j):
+        self.phi_line, = self.ic_plot.plot(y, ic_io, 'b-')
+        self.phi_d_line, = self.ec_plot.plot(y*x_N, phi_d, 'b-')
+
+        if all(e > 0.0 for e in j_arr):
             self.j_plot.set_yscale('log')
-        self.j_line, = self.j_plot.plot(self.j, 'r-')
+        self.j_line, = self.j_plot.plot(j_arr, 'r-')
 
-        self.phi_plot.set_autoscaley_on(True)
-        self.phi_d_plot.set_autoscaley_on(True)
+        self.dj_line, = self.dj_plot.plot(y, dj_io)
+
         self.j_plot.set_autoscaley_on(True)
+        self.dj_plot.set_autoscaley_on(True)
 
-        self.phi_plot.set_autoscaley_on(False)
-        self.phi_plot.set_xlim([0.0,1.0])
-        self.phi_plot.set_ylim([0.85,1.15])
-        self.phi_d_plot.set_autoscaley_on(False)
-        self.phi_d_plot.set_xlim([0.0,1.10*self.target_x[0]])
-        self.phi_d_plot.set_ylim([0.0,1.10*self.target_phi_d.max()])
+        self.ic_plot.set_autoscaley_on(False)
+        self.ic_plot.set_xlim([0.0,1.0])
+        self.ic_plot.set_ylim([0.85,1.15])
+        self.ec_plot.set_autoscaley_on(False)
+        self.ec_plot.set_xlim([0.0,1.10*self.options['target_ec']['x']])
+        self.ec_plot.set_ylim([0.0,1.10*np.array(self.options['target_ec']['phi_d']).max()])
         
-        if self.show:
+        if self.options['show']:
             self.fig.canvas.draw()
-        if self.save:
-            self.fig.savefig(self.save_loc + '_{}.png'.format(len(self.j)))   
+        if self.options['save']:
+            self.fig.savefig(self.options['save_loc'] + 'adj_plots_{}.png'.format(len(j_arr)))   
 
     def clean_up(self):
         plt.close()
@@ -344,6 +371,19 @@ def map_to_arrays(w, x, mesh):
             np.array(h).flatten(), np.array(phi).flatten(), 
             np.array(phi_d).flatten(), x_N, u_N)
 
+def map_function_to_array(f, mesh):
+
+    arr = f.vector().array()
+    n_ele = len(mesh.cells())
+
+    V = f.function_space()
+
+    g = []
+    for i_ele in range(n_ele):
+        g.append([arr[i] for i in V.dofmap().cell_dofs(i_ele)])
+
+    return np.array(g).flatten()
+
 def set_model_ic_from_file():
     print 'Not implemented'
 
@@ -361,10 +401,17 @@ def create_function_from_file(fname, fs):
     f.close()
     return fn
 
-def write_array_to_file(fname, arr, method):
+def write_array_to_file(fname, arrs, method):
+
+    if not hasattr(arrs[0],'__iter__') and len(arrs) > 1:
+        arrs = [arrs]
+
     f = open(fname, method)
-    f.write(json.dumps(list(arr)))
-    if method == 'a':
+    for arr in arrs:
+        try:
+            f.write(json.dumps(list(arr)))
+        except:
+            f.write(json.dumps(arr))
         f.write('\n')
     f.close()
 

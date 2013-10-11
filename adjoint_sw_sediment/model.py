@@ -123,7 +123,7 @@ class Model():
         solve(a == L, self.w[0])
         solve(a == L, self.w[1])
 
-    def generate_form(self):
+    def generate_form(self): 
 
         # get time discretised functions
         q = dict()
@@ -273,7 +273,8 @@ class Model():
                     self.write_t += self.write
 
             # write timestep info
-            io.print_timestep_info(self, delta)
+            if self.ts_info == True:
+                io.print_timestep_info(self, delta)
 
         if self.plot:
             self.plotter.clean_up()

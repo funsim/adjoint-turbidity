@@ -15,6 +15,7 @@ import sys
 # ----------------------------------------------------------------------------------------------------
 
 model = Model('optimise_phi_ic.asml')
+model.ts_info = False
 set_log_level(ERROR)
 
 # ----------------------------------------------------------------------------------------------------
@@ -28,16 +29,34 @@ phi_d_aim = input_output.create_function_from_file('deposit_data.json', model.V)
 x_N_aim = input_output.create_function_from_file('runout_data.json', model.R)
 
 # form functional integrals
-int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*dx
-int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*dx
+phi_d_scale = Constant(1.0)
+x_scale = Constant(1.0)
+int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*phi_d_scale*dx
+int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*x_scale*dx
 
 # functional regularisation
 reg_scale = Constant(1e-3)  # 1e-2 t=10
 int_reg = inner(grad(phi), grad(phi))*reg_scale*dx
 
 # functional
-functional_start = [[int_reg, None]]
-functional_end = [[int_0, 1e-0], [int_1, 1e-1]] 
+functional = Functional(int_reg*dt[START_TIME] + (int_0 + int_1)*dt[FINISH_TIME])
+
+class scaled_parameter():
+    def __init__(self, parameter, value, term, time):
+        self.parameter = parameter
+        self.value = value
+        self.term = term
+        self.time = time
+
+scaled_parameters = [
+    scaled_parameter(phi_d_scale, 1e-0, 
+                     inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*dx, 
+                     timeforms.FINISH_TIME),
+    scaled_parameter(x_scale, 1e-2, 
+                     inner(x_N-x_N_aim, x_N-x_N_aim)*dx, 
+                     timeforms.FINISH_TIME)
+    ]
+# functional_end = [[int_0, 1e-0], [int_1, 1e-1]] 
 
 # ----------------------------------------------------------------------------------------------------
 # OPTIMISE
@@ -52,16 +71,33 @@ for i, override in enumerate(model.override_ic):
             p = project(model.w_ic_e[i], FunctionSpace(model.mesh, 'R', 0), name='ic_' + override['id'])
         parameters.append(InitialConditionParameter(p))
 
-reduced_functional = MyReducedFunctional(model, functional_start, functional_end, parameters, dump_ic=True)
+# get target ic
+phi_aim = input_output.create_function_from_file('phi_ic.json', model.V)
+
+adj_plotter_options = input_output.Adjoint_Plotter.options
+adj_plotter_options['target_ic']['phi'] = input_output.map_function_to_array(phi_aim, model.mesh)
+adj_plotter_options['target_ec']['phi_d'] = input_output.map_function_to_array(phi_d_aim, model.mesh)
+adj_plotter_options['target_ec']['x'] = x_N_aim.vector().array()[0]
+adj_plotter_options['save'] = True
+adj_plotter_options['show'] = False
+adj_plotter = input_output.Adjoint_Plotter(options = adj_plotter_options)
+
+reduced_functional = MyReducedFunctional(model, functional, scaled_parameters, parameters, 
+                                         dump_ic=True, dump_ec=True, adj_plotter=adj_plotter,
+                                         scale = 1e-5)
 bounds = [0.5,1.5]
 
 adj_html("forward.html", "forward")
 adj_html("adjoint.html", "adjoint")
 
+#method = "L-BFGS-B", 
+# line_search_options = {"ftol": 1e-4, "gtol": 0.1, "verify": False, "ignore_warnings": False}
+# m_opt, info = minimize_steepest_descent(reduced_functional, options={"gtol": 1e-16, "maxiter": 40, "line_search": "strong_wolfe", "line_search_options": line_search_options})
+
 m_opt = minimize(reduced_functional, method = "L-BFGS-B", 
                  options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
                  bounds = bounds,
-                 in_euclidian_space = True) 
+                 in_euclidian_space = False) 
 
 # ----------------------------------------------------------------------------------------------------
 # UNUSED
