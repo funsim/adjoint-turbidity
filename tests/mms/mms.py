@@ -27,23 +27,26 @@ def getError(model):
 
     return Eh, Ephi, Eq, Ephi_d 
 
-model = Model('mms.asml')
 set_log_level(ERROR)    
-model.error_callback = getError
 parameters["adjoint"]["stop_annotating"] = True 
 
+# create model
+model = Model('mms.asml', error_callback=getError, no_init=True)
+
 for disc in ['CG', 'DG']:
-    model.disc = disc
     info_red("="*50)  
-    info_red(model.disc)
-    info_red("="*50)  
+    info_red(disc)
+    info_red("="*50) 
+    model.disc = disc 
 
     h = [] # element sizes
     E = [] # errors
     for nx in [3, 6, 12, 24, 48, 96, 192]:
+        # set up and run
         h.append(pi/nx)
-        model.ele_count = nx
         print 'h is: ', h[-1]        
+        model.ele_count = nx
+        model.initialise()
         E.append(model.run())
 
     print ( "h=%10.2E rh=0.00 rphi=0.00 rq=0.00 rphi_d=0.00 Eh=%.2e Ephi=%.2e Eq=%.2e Ephi_d=%.2e" 

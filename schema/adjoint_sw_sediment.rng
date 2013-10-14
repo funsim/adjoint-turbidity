@@ -81,6 +81,12 @@ characters in the project name should be avoided.</a:documentation>
             </optional>
           </element>
         </optional>
+        <optional>
+          <!-- show information about each timestep -->
+          <element name="ts_info">
+            <empty/>
+          </element>
+        </optional>
       </element>
       <!-- spatial discretisation -->
       <element name="spatial_discretisation">

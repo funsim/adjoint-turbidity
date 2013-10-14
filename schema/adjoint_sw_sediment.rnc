@@ -67,6 +67,10 @@ start =
                      real
                   }
                }?
+            }?,
+            # show information about each timestep
+            element ts_info {
+               empty
             }?
          },
          # spatial discretisation

@@ -33,15 +33,20 @@ set_log_level(ERROR)
 
 class Model():
 
-    def __init__(self, xml_path):
+    def __init__(self, xml_path, error_callback=None, no_init=False):
         load_options(self, xml_path)
 
         ### options that aren't handled in the diamond options file ###
         # output data
         self.write = None
         # error calculation
-        self.error_callback = None
+        self.error_callback = error_callback
 
+        # set up
+        if not no_init:
+            self.initialise()
+
+    def initialise(self):
         # initialise function spaces
         self.initialise_function_spaces()
         self.generate_form()
@@ -91,7 +96,7 @@ class Model():
         self.w[1] = Function(self.W, name='U_1')
 
         # create ic expression
-        exp_str = 'self.w_ic_e = Expression(self.w_ic_e, self.W.ufl_element(), ' + self.w_ic_var + ')'
+        exp_str = 'self.w_ic_e = Expression(self.w_ic_e_cstr, self.W.ufl_element(), ' + self.w_ic_var + ')'
         exec exp_str in globals(), locals()
 
     def set_ic(self, ic_dict = None):
@@ -103,7 +108,6 @@ class Model():
         y_exp = project(Expression('x[0]'), self.V)
         self.y.assign(y_exp)
         
-        w_ic = Function(self.W)
         test = TestFunction(self.W)
         trial = TrialFunction(self.W)
         a = 0

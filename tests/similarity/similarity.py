@@ -14,9 +14,9 @@ def getError(model):
 
     K = ((27.0*model.Fr((0,0))**2.0)/(12.0 - 2.0*model.Fr((0,0))**2.0))**(1./3.)
 
-    S_q = project(Expression(model.w_ic_e[0], K = K, Fr = model.Fr((0,0)), t = model.t, degree=5), V)
-    S_h = project(Expression(model.w_ic_e[1],  K = K, Fr = model.Fr((0,0)), t = model.t, degree=5), V)
-    S_phi = project(Expression(model.w_ic_e[2], K = K, Fr = model.Fr((0,0)), t = model.t, degree=5), V)
+    S_q = project(Expression(model.w_ic_e_cstr[0], K = K, Fr = model.Fr((0,0)), t = model.t, degree=5), V)
+    S_h = project(Expression(model.w_ic_e_cstr[1],  K = K, Fr = model.Fr((0,0)), t = model.t, degree=5), V)
+    S_phi = project(Expression(model.w_ic_e_cstr[2], K = K, Fr = model.Fr((0,0)), t = model.t, degree=5), V)
     
     q, h, phi, phi_d, x_N, u_N = model.w[0].split()
     E_q = errornorm(q, S_q, norm_type="L2", degree_rise=2)
@@ -40,25 +40,28 @@ nx = [4, 8, 16]
 # dt = [1e-1/64]
 # dX = [1.0/16]
 
-model = Model('similarity.asml')
 set_log_level(ERROR)    
-model.error_callback = getError
 parameters["adjoint"]["stop_annotating"] = True 
+
+# create model
+model = Model('similarity.asml', error_callback=getError, no_init=True)
 
 E = []
 for dt_ in dt:
     E.append([])
     for nx_ in nx:
-        print nx_, dt_
+        info_blue('N_cells:{:2}  Timestep:{}'.format(nx_, dt_))
         model.ele_count = nx_
         model.timestep = dt_
-        E[-1].append(model.run())
+        model.initialise()
+        E[-1].append(model.run(annotate=False))
 
 input_output.write_array_to_file('similarity_convergence.json', E, 'w')
 
 E = E[0]
-print ( "R = 0.00  0.00  0.00  0.00  0.00 E = %.2e %.2e %.2e %.2e %.2e" 
-        % (E[0][0], E[0][1], E[0][2], E[0][4], E[0][5]) ) 
+info_green( "    h     phi   q     x     u         h        phi      q        x        u")
+info_green( "R = 0.00  0.00  0.00  0.00  0.00  E = %.2e %.2e %.2e %.2e %.2e" 
+            % (E[0][0], E[0][1], E[0][2], E[0][4], E[0][5]) ) 
 for i in range(1, len(E)):
     log_ratio = np.log(float(nx[i-1])/float(nx[i]))
     rh = np.log(E[i][0]/E[i-1][0])/log_ratio
@@ -66,7 +69,6 @@ for i in range(1, len(E)):
     rq = np.log(E[i][2]/E[i-1][2])/log_ratio
     rx = np.log(E[i][4]/E[i-1][4])/log_ratio
     ru = np.log(E[i][5]/E[i-1][5])/log_ratio
-    print ( "R = %-5.2f %-5.2f %-5.2f %-5.2f %-5.2f E = %.2e %.2e %.2e %.2e %.2e"
-            % (rh, rphi, rq, rx, ru, E[i][0], E[i][1], E[i][2], 
-               E[i][4], E[i][5]) )  
-    
+    info_green ( "R = %-5.2f %-5.2f %-5.2f %-5.2f %-5.2f E = %.2e %.2e %.2e %.2e %.2e"
+                 % (rh, rphi, rq, rx, ru, E[i][0], E[i][1], E[i][2], 
+                    E[i][4], E[i][5]) )  

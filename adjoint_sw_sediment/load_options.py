@@ -45,6 +45,10 @@ def load_options(model, xml_path):
         raise Exception('unrecognised finishing criteria')
     
     # output options
+    if libspud.have_option('output_options/ts_info'):
+        model.ts_info = True
+    else:
+        model.ts_info = False
     if libspud.have_option('output_options/plotting'):
         option_path = 'output_options/plotting/'
         model.plot = libspud.get_option(option_path + 'plotting_interval')
@@ -88,7 +92,7 @@ def load_options(model, xml_path):
 
     # initial conditions
     option_path = 'initial_conditions/'
-    model.w_ic_e = (
+    model.w_ic_e_cstr = (
         read_ic(option_path + 'momentum', default = '0.0'), 
         read_ic(option_path + 'height', default = '1.0'),
         read_ic(option_path + 'volume_fraction', default = '1.0'),

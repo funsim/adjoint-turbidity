@@ -9,50 +9,41 @@ from adjoint_sw_sediment import *
 import numpy as np
 import sys
 
-set_log_level(PROGRESS) 
+set_log_level(ERROR) 
 
-def run():
+model = Model('taylor.asml', no_init=True)
 
-    model = Model('taylor.asml')
+info_blue('Taylor test for beta')
 
-    info_blue('Taylor test for phi')
+info_green('Running forward model')
+# ic = project(Expression('0.5'), model.phi_FS)
+ic = Constant(5e-3)
+model.beta = ic
+model.initialise()
+model.run()
 
-    # ic = project(Expression('0.5'), model.phi_FS)
-    ic = Constant(5e-3)
+parameters["adjoint"]["stop_annotating"] = True 
+
+w_0 = model.w[0]
+J = Functional(inner(w_0, w_0)*dx*dt[FINISH_TIME])
+Jw = assemble(inner(w_0, w_0)*dx)
+
+info_green('Computing adjoint')
+dJdbeta = compute_gradient(J, ScalarParameter(ic), forget=False)
+
+def Jhat(ic):
+    info_green('Rerunning forward model')
     model.beta = ic
-    model.set_ic()
-    model.generate_form()
-    model.solve()
-
-    parameters["adjoint"]["stop_annotating"] = True 
-
+    model.initialise()
+    model.run(annotate = False)
     w_0 = model.w[0]
-    J = Functional(inner(w_0, w_0)*dx*dt[FINISH_TIME])
-    Jw = assemble(inner(w_0, w_0)*dx)
+    return assemble(inner(w_0, w_0)*dx)
 
-    adj_html("forward.html", "forward")
-    adj_html("adjoint.html", "adjoint")
+conv_rate = taylor_test(Jhat, ScalarParameter(ic), Jw, dJdbeta, value = ic, seed=1e-0)
+# conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdphi, value = ic)
 
-    tic()
-    dJdphi = compute_gradient(J, ScalarParameter(ic), forget=False)
-    print "\n* * * Backward run: time taken = {}".format(toc())
-
-# dJdphi = compute_gradient(J, InitialConditionParameter(ic), forget=False)
-
-# def Jhat(ic):
-#     model.beta = ic
-#     model.set_ic()
-#     model.generate_form()
-#     model.solve(annotate = False)
-#     w_0 = model.w[0]
-#     print 'Jhat: ', assemble(inner(w_0, w_0)*dx)
-#     return assemble(inner(w_0, w_0)*dx)
-
-# conv_rate = taylor_test(Jhat, ScalarParameter(ic), Jw, dJdphi, value = ic, seed=1e-0)
-# # conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdphi, value = ic)
-
-# info_blue('Minimum convergence order with adjoint information = {}'.format(conv_rate))
-# if conv_rate > 1.9:
-#     info_blue('*** test passed ***')
-# else:
-#     info_red('*** ERROR: test failed ***')
+info_blue('Minimum convergence order with adjoint information = {}'.format(conv_rate))
+if conv_rate > 1.9:
+    info_green('*** test passed ***')
+else:
+    info_red('*** ERROR: test failed ***')

@@ -83,7 +83,7 @@ class Equation():
             # mms bc
             if model.mms:
                 self.F -= model.k*v*u_td*model.n*(model.ds(0) + model.ds(1))
-                self.F += model.k*v*model.w_ic[index]*model.n*(model.ds(0) + model.ds(1)) 
+                self.F += model.k*v*model.w_ic_e[index]*model.n*(model.ds(0) + model.ds(1)) 
             # bc term for zero momentum at left boundary
             if index == 0 and not model.mms:
                 self.F -= model.k*v*u_td*model.n*model.ds(0)
