@@ -57,7 +57,7 @@ class Plotter():
         if model.show_plot:
             plt.ion()
         
-        y, q, h, phi, phi_d, x_N, u_N = map_to_arrays(model.w[0], model.y, model.mesh)     
+        y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)     
 
         self.h_y_lim = np.array(h).max()*1.1
         self.u_y_lim = np.array(q).max()*1.1
@@ -80,7 +80,7 @@ class Plotter():
 
     def update_plot(self, model):
 
-        y, q, h, phi, phi_d, x_N, u_N = map_to_arrays(model.w[0], model.y, model.mesh)     
+        y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)     
         y = y*x_N*self.h_0
 
         self.title.set_text(timestep_info_string(model, True))
@@ -216,7 +216,7 @@ class Adjoint_Plotter():
         self.dj_plot.set_xlabel(r'$x$')
         self.dj_plot.set_ylabel(r'$\partial J \over \partial \varphi$')
 
-        y, q, h, phi, phi_d, x_N, u_N = map_to_arrays(model.w[0], model.y, model.mesh) 
+        y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh) 
 
         if self.options['target_ic']['phi'] is not None:
             self.target_phi_line, = self.ic_plot.plot(y, 
@@ -269,7 +269,7 @@ def clear_model_files(file):
 
 def write_model_to_files(model, method, file):
 
-    y, q, h, phi, phi_d, x_N, u_N = map_to_arrays(model.w[0], model.y, model.mesh)    
+    y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)    
 
     write_array_to_file(file + '_q.json', q, method)
     write_array_to_file(file + '_h.json', h, method)
@@ -294,6 +294,7 @@ def timestep_info_string(model, tex=False):
     x_N = arr[model.W.sub(4).dofmap().cell_dofs(0)[0]]
     u_N = arr[model.W.sub(5).dofmap().cell_dofs(0)[0]]
     h_N = arr[model.W.sub(1).dofmap().cell_dofs(n_ele - 1)[1]]
+    timestep = arr[model.W.sub(6).dofmap().cell_dofs(0)[0]]
 
     q_cons = 0
     h_cons = 0
@@ -326,20 +327,20 @@ def timestep_info_string(model, tex=False):
 
     if tex:
         if model.beta((0,0)):
-            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, model.timestep) +
+            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}"#, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
                     .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
         else:
-            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, model.timestep) +
+            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}"#, h = {4:.2e}"
                     .format(x_N, u_N, h_N, q_cons, h_cons))
     else:
         if model.beta((0,0)):
-            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, model.timestep) +
+            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
                 "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}"#, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
                 .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
         else:
-            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, model.timestep) +
+            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
                 "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}"#, h = {4:.2e}"
                 .format(x_N, u_N, h_N, q_cons, h_cons))
 
@@ -366,10 +367,11 @@ def map_to_arrays(w, x, mesh):
     
     x_N = arr[W.sub(4).dofmap().cell_dofs(0)[0]]
     u_N = arr[W.sub(5).dofmap().cell_dofs(0)[0]]
+    k = arr[W.sub(6).dofmap().cell_dofs(0)[0]]
 
     return (np.array(y).flatten(), np.array(q).flatten(), 
             np.array(h).flatten(), np.array(phi).flatten(), 
-            np.array(phi_d).flatten(), x_N, u_N)
+            np.array(phi_d).flatten(), x_N, u_N, k)
 
 def map_function_to_array(f, mesh):
 
