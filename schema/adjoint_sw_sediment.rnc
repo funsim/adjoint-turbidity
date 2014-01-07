@@ -30,9 +30,6 @@ start =
             },
             ## adaptive timestep
             element adaptive_timestep {
-               element adapt_initial_timestep {
-                  empty
-               }?,
                element cfl_criteria {
                   real
                }

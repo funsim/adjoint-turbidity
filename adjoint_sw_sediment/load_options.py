@@ -26,11 +26,9 @@ def load_options(model, xml_path):
         raise Exception('unrecognised time discretisation in options file')
 
     model.start_time = get_optional('time_options/start_time', default = 0.0)
-    model.timestep = libspud.get_option('time_options/timestep')
     if libspud.have_option('time_options/adaptive_timestep'):
         option_path = 'time_options/adaptive_timestep/'
         model.adapt_timestep = True
-        model.adapt_initial_timestep = libspud.have_option(option_path + 'adapt_initial_timestep')
         model.adapt_cfl = Constant(libspud.get_option(option_path + 'cfl_criteria'))
     else:
         model.adapt_timestep = False
@@ -99,6 +97,7 @@ def load_options(model, xml_path):
         read_ic(option_path + 'deposit_depth', default = '0.0'),
         get_optional(option_path + 'initial_length', default = '1.0'),
         read_ic(option_path + 'front_velocity', default = '0.0'),
+        str(libspud.get_option('time_options/timestep')),
         )
     model.w_ic_var = ''
     if (libspud.have_option(option_path + 'variables') and 
@@ -128,6 +127,9 @@ def load_options(model, xml_path):
         {'id':'front_velocity', 
          'override':libspud.have_option(option_path + 'front_velocity/override'), 
          'FS':'R'}, 
+        {'id':'timestep',
+         'override':False,
+         'FS':'R'}
         )
 
     # boundary conditions

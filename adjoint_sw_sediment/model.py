@@ -78,16 +78,12 @@ class Model():
         # define function spaces
         self.V = FunctionSpace(self.mesh, self.disc, self.degree)
         self.R = FunctionSpace(self.mesh, "R", 0)
-        self.W = MixedFunctionSpace([self.V, self.V, self.V, self.V, self.R, self.R])
+        self.W = MixedFunctionSpace([self.V, self.V, self.V, self.V, self.R, self.R, self.R])
 
         # define linear function space
         self.V_CG = FunctionSpace(self.mesh, 'CG', self.degree)
         self.R_CG = FunctionSpace(self.mesh, "R", 0)
-        self.W_CG = MixedFunctionSpace([self.V_CG, self.V_CG, self.V_CG, self.V_CG, self.R_CG, self.R_CG])
-
-        # define test functions
-        (self.q_tf, self.h_tf, self.phi_tf, self.phi_d_tf, self.x_N_tf, self.u_N_tf) = TestFunctions(self.W)
-        self.v = TestFunction(self.W)
+        self.W_CG = MixedFunctionSpace([self.V_CG, self.V_CG, self.V_CG, self.V_CG, self.R_CG, self.R_CG, self.R_CG])
 
         # initialise functions
         self.y = Function(self.V, name='y')
@@ -136,28 +132,20 @@ class Model():
         phi_d = dict()
         x_N = dict()
         u_N = dict()
-        q[0], h[0], phi[0], phi_d[0], x_N[0], u_N[0] = split(self.w[0])
-        q[1], h[1], phi[1], phi_d[1], x_N[1], u_N[1] = split(self.w[1])
+        k = dict()
+        q[0], h[0], phi[0], phi_d[0], x_N[0], u_N[0], k[0] = split(self.w[0])
+        q[1], h[1], phi[1], phi_d[1], x_N[1], u_N[1], k[1] = split(self.w[1])
         q_td = self.time_discretise(q)
         h_td = self.time_discretise(h)
         phi_td = self.time_discretise(phi)
         phi_d_td = self.time_discretise(phi_d)
         x_N_td = self.time_discretise(x_N)
         u_N_td = self.time_discretise(u_N)
+        k_td = self.time_discretise(k)
 
         # get source terms
         if self.mms:
             self.S = [Expression(self.S_e[i], self.W.sub(i).ufl_element()) for i in range(len(self.S_e))]
-
-        # define adaptive timestep form
-        if self.adapt_timestep:
-            self.k = project(Expression(str(self.timestep)), self.R)
-            self.k_tf = TestFunction(self.R)
-            self.k_trf = TrialFunction(self.R)
-            self.a_k = self.k_tf*self.k_trf*dx 
-            self.L_k = self.k_tf*(x_N[0]*self.dX)/u_N[0]*self.adapt_cfl*dx
-        else:
-            self.k = Constant(self.timestep)
 
         self.E = dict()
 
@@ -195,15 +183,24 @@ class Model():
         if self.mms:
             F_x_N = v*(x_N[0] - x_N[1])*dx 
         else:
-            F_x_N = v*(x_N[0] - x_N[1])*dx - v*u_N_td*self.k*dx 
+            F_x_N = v*(x_N[0] - x_N[1])*dx - v*u_N_td*k_td*dx 
 
         # NOSE SPEED
         v = TestFunctions(self.W)[5]
         F_u_N = v*(self.Fr*(phi[0])**0.5)*self.ds(1) - \
             v*u_N[0]*self.ds(1)
 
+        # define adaptive timestep form
+        def smooth_min(val, min = self.dX((0,0))/10.0):
+            return (val**2.0 + min)**0.5
+        v = TestFunction(self.W)[6]
+        if self.adapt_timestep:
+            F_k = v*(k[0] - k[1])*dx - v*x_N_td*self.dX/smooth_min(u_N_td)*self.adapt_cfl*dx
+        else:
+            F_k = v*(k[0] - k[1])*dx 
+
         # combine PDE's
-        self.F = self.E[0].F + self.E[1].F + self.E[2].F + self.E[3].F + F_x_N + F_u_N
+        self.F = self.E[0].F + self.E[1].F + self.E[2].F + self.E[3].F + F_x_N + F_u_N + F_k
 
         # compute directional derivative about u in the direction of du (Jacobian)
         self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
@@ -237,11 +234,6 @@ class Model():
 
         delta = 1e10
         while not (time_finish(self.t) or converged(delta)):
-            
-            # ADAPTIVE TIMESTEP
-            if self.adapt_timestep and (self.t > 0.0 or self.adapt_initial_timestep):
-                solve(self.a_k == self.L_k, self.k)
-                self.timestep = self.k.vector().array()[0]
 
             # M = assemble(self.J)
             # U, s, Vh = scipy.linalg.svd(M.array())
@@ -253,16 +245,18 @@ class Model():
                 
             if self.slope_limit:
                 slope_limit(self.w[0], annotate=annotate)
+
+            self.w[1].assign(self.w[0])
+
+            timestep = (self.w[0].vector().array())[self.W.sub(6).dofmap().cell_dofs(0)[0]]
                             
             if self.tol:
                 delta = 0.0
                 f_list = [[self.w[0].split()[i], self.w[1].split()[i]] for i in range(len(self.w[0].split()))]
                 for f_0, f_1 in f_list:
-                    delta = max(errornorm(f_0, f_1, norm_type="L2", degree_rise=1)/self.timestep, delta)
+                    delta = max(errornorm(f_0, f_1, norm_type="L2", degree_rise=1)/timestep, delta)
 
-            self.w[1].assign(self.w[0])
-
-            self.t += self.timestep
+            self.t += timestep
 
             # display results
             if self.plot:
