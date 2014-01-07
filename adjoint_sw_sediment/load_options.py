@@ -90,7 +90,7 @@ def load_options(model, xml_path):
 
     # initial conditions
     option_path = 'initial_conditions/'
-    model.w_ic_e_cstr = (
+    model.w_ic_e_cstr = [
         read_ic(option_path + 'momentum', default = '0.0'), 
         read_ic(option_path + 'height', default = '1.0'),
         read_ic(option_path + 'volume_fraction', default = '1.0'),
@@ -98,7 +98,7 @@ def load_options(model, xml_path):
         get_optional(option_path + 'initial_length', default = '1.0'),
         read_ic(option_path + 'front_velocity', default = '0.0'),
         str(libspud.get_option('time_options/timestep')),
-        )
+        ]
     model.w_ic_var = ''
     if (libspud.have_option(option_path + 'variables') and 
         libspud.option_count(option_path + 'variables/var') > 0):
