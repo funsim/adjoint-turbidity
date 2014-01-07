@@ -199,7 +199,7 @@ class Model():
 
         # NOSE SPEED
         v = TestFunctions(self.W)[5]
-        F_u_N = v*(self.Fr*(phi_td)**0.5)*self.ds(1) - \
+        F_u_N = v*(self.Fr*(phi[0])**0.5)*self.ds(1) - \
             v*u_N[0]*self.ds(1)
 
         # combine PDE's
