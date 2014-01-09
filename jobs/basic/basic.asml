@@ -6,22 +6,22 @@
   <mesh/>
   <time_options>
     <time_discretisation name="crank_nicholson"/>
-    <finish_time>
-      <real_value rank="0">10.0</real_value>
-    </finish_time>
     <timestep>
       <real_value rank="0">0.05</real_value>
     </timestep>
     <adaptive_timestep>
       <cfl_criteria>
-        <real_value rank="0">1.0</real_value>
+        <real_value rank="0">0.1</real_value>
       </cfl_criteria>
     </adaptive_timestep>
+    <finish_time>
+      <real_value rank="0">10.0</real_value>
+    </finish_time>
   </time_options>
   <output_options>
     <plotting>
       <plotting_interval>
-        <real_value rank="0">0.1</real_value>
+        <real_value rank="0">0.01</real_value>
       </plotting_interval>
       <output name="live_plotting"/>
     </plotting>
