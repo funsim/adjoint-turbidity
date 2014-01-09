@@ -34,94 +34,56 @@ parameters["adjoint"]["stop_annotating"] = True
 # create model
 model = Model('similarity.asml', error_callback=getError, no_init=True)
 
-# dt = np.array([1*10**(x) for x in np.linspace(-0.0, -2.0, 6)])
-# nx = np.array([int(x) for x in np.linspace(5, 10, 6)])
+info_red('crank nicholson')
+model.time_discretise = time_discretisation.crank_nicholson
 
-# h = 1.0/nx
-# E = np.zeros([6, dt.shape[0], h.shape[0]])
-# rt = np.zeros([6, dt.shape[0], h.shape[0]])
-# rx = np.zeros([6, dt.shape[0], h.shape[0]])
-
-# for i_dt, dt_ in enumerate(dt):
-#     for i_nx, nx_ in enumerate(nx):
-#         info_blue('N_cells:{:2}  Timestep:{}'.format(nx_, dt_))
-
-#         model.ele_count = nx_
-#         model.timestep = dt_
-#         model.initialise()
-#         E[:, i_dt, i_nx] = model.run(annotate=False)
-
-#         if i_dt > 0:
-#             rt[:, i_dt, i_nx] = np.log(E[:, i_dt, i_nx]/E[:, i_dt - 1, i_nx])/np.log(dt[i_dt]/dt[i_dt - 1])
-#         if i_nx > 0:
-#             rx[:, i_dt, i_nx] = np.log(E[:, i_dt, i_nx]/E[:, i_dt, i_nx - 1])/np.log(h[i_nx]/h[i_nx - 1])
-        
-#         var = 4
-#         # print E[var,:,:]
-#         print ''
-#         info_blue('rt')
-#         print rt[:,:,:]
-#         print ''
-#         info_blue('rx')
-#         print rx[:,:,:]
-
-dt = np.array([1*10**(x) for x in np.linspace(-3.0, -3.0, 1)])
-nx = np.array([int(x) for x in np.linspace(5, 10, 6)])
+nx = np.array([int(x) for x in np.linspace(10, 16, 4)])
+dt = np.array([1.0/x * 0.2 for x in np.linspace(10, 16, 4)])
 
 h = 1.0/nx
-E = np.zeros([5, dt.shape[0], h.shape[0]])
-rt = np.zeros([5, dt.shape[0], h.shape[0]])
-rx = np.zeros([5, dt.shape[0], h.shape[0]])
+E = np.zeros([5, h.shape[0]])
+r = np.zeros([5, h.shape[0]])
 
-info_blue('spatial convergence test')
-for i_dt, dt_ in enumerate(dt):
-    for i_nx, nx_ in enumerate(nx):
-        info_blue('N_cells:{:2}  Timestep:{}'.format(nx_, dt_))
-
-        model.ele_count = nx_
-        model.w_ic_e_cstr[6] = str(dt_)
-        model.initialise()
-        E[:, i_dt, i_nx] = model.run(annotate=False)
-
-        if i_dt > 0:
-            rt[:, i_dt, i_nx] = np.log(E[:, i_dt, i_nx]/E[:, i_dt - 1, i_nx])/np.log(dt[i_dt]/dt[i_dt - 1])
-        if i_nx > 0:
-            rx[:, i_dt, i_nx] = np.log(E[:, i_dt, i_nx]/E[:, i_dt, i_nx - 1])/np.log(h[i_nx]/h[i_nx - 1])
+for i in range(len(h)):
+    info_blue('N_cells:{:2}  Timestep:{}'.format(nx[i], dt[i]))
+    
+    model.ele_count = nx[i]
+    model.w_ic_e_cstr[6] = str(dt[i])
+    model.initialise()
+    E[:, i] = model.run(annotate=False)
+    
+    if i > 0:
+        r[:, i] = np.log(E[:, i]/E[:, i-1])/np.log(h[i]/h[i - 1])
         
 print ''
-info_blue('rx')
-print rx
+print r
 print ''
 
-assert((rx[:3,:,1:] > 1.75).all())
-assert((rx[3:,:,1:] > 0.9).all())
+assert((r[:,1:] > 1.75).all())
 
-dt = np.array([1*10**(x) for x in np.linspace(-1.0, -1.5, 6)])
-nx = np.array([int(x) for x in np.linspace(1e2, 1e2, 1)])
+info_red('runge kutta')
+model.time_discretise = time_discretisation.runge_kutta
+
+nx = np.array([int(x) for x in np.linspace(10, 16, 4)])
+dt = np.array([1.0/x * 0.2 for x in np.linspace(10, 16, 4)])
 
 h = 1.0/nx
-E = np.zeros([5, dt.shape[0], h.shape[0]])
-rt = np.zeros([5, dt.shape[0], h.shape[0]])
-rx = np.zeros([5, dt.shape[0], h.shape[0]])
+E = np.zeros([5, h.shape[0]])
+r = np.zeros([5, h.shape[0]])
 
-info_blue('temporal convergence test')
-for i_dt, dt_ in enumerate(dt):
-    for i_nx, nx_ in enumerate(nx):
-        info_blue('N_cells:{:2}  Timestep:{}'.format(nx_, dt_))
-
-        model.ele_count = nx_
-        model.w_ic_e_cstr[6] = str(dt_)
-        model.initialise()
-        E[:, i_dt, i_nx] = model.run(annotate=False)
-
-        if i_dt > 0:
-            rt[:, i_dt, i_nx] = np.log(E[:, i_dt, i_nx]/E[:, i_dt - 1, i_nx])/np.log(dt[i_dt]/dt[i_dt - 1])
-        if i_nx > 0:
-            rx[:, i_dt, i_nx] = np.log(E[:, i_dt, i_nx]/E[:, i_dt, i_nx - 1])/np.log(h[i_nx]/h[i_nx - 1])
+for i in range(len(h)):
+    info_blue('N_cells:{:2}  Timestep:{}'.format(nx[i], dt[i]))
+    
+    model.ele_count = nx[i]
+    model.w_ic_e_cstr[6] = str(dt[i])
+    model.initialise()
+    E[:, i] = model.run(annotate=False)
+    
+    if i > 0:
+        r[:, i] = np.log(E[:, i]/E[:, i-1])/np.log(h[i]/h[i - 1])
         
 print ''
-info_blue('rt')
-print rt.T
+print r
 print ''
 
-assert((rt[:,1:,:] > 1.60).all())
+assert((r[:,1:] > 1.75).all())

@@ -9,7 +9,7 @@
     </element_count>
   </mesh>
   <time_options>
-    <time_discretisation name="crank_nicholson"/>
+    <time_discretisation name="runge_kutta"/>
     <start_time>
       <real_value rank="0">0.5</real_value>
     </start_time>
@@ -17,10 +17,12 @@
       <real_value rank="0">0.0015625</real_value>
     </timestep>
     <finish_time>
-      <real_value rank="0">0.52</real_value>
+      <real_value rank="0">0.75</real_value>
     </finish_time>
   </time_options>
-  <output_options/>
+  <output_options>
+    <ts_info/>
+  </output_options>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>

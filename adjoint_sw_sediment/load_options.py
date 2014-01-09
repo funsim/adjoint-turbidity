@@ -16,7 +16,9 @@ def load_options(model, xml_path):
     
     # time options
     option_path = 'time_options/time_discretisation::'
-    if libspud.have_option(option_path + 'crank_nicholson'):
+    if libspud.have_option(option_path + 'runge_kutta'):
+        model.time_discretise = time_discretisation.runge_kutta
+    elif libspud.have_option(option_path + 'crank_nicholson'):
         model.time_discretise = time_discretisation.crank_nicholson
     elif libspud.have_option(option_path + 'explicit'):
         model.time_discretise = time_discretisation.explicit

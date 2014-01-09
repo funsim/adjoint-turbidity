@@ -57,6 +57,8 @@ class MyReducedFunctional(ReducedFunctional):
         def compute_functional(value, annotate):
             '''run forward model and compute functional'''
 
+            # algorithm often does two forward runs for every adjoint run
+            # we only want to store results from the first forward run
             if self.last_iter == self.iter:
                 repeat = True
             else:
@@ -119,7 +121,7 @@ class MyReducedFunctional(ReducedFunctional):
 
             # dump results
             if self.dump_ec and not repeat:
-                y, q, h, phi, phi_d, x_N, u_N = input_output.map_to_arrays(self.model.w[0], self.model.y, self.model.mesh) 
+                y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(self.model.w[0], self.model.y, self.model.mesh) 
                 input_output.write_array_to_file('ec_adj_latest.json',[phi_d, x_N],'w')
                 input_output.write_array_to_file('ec_adj.json',[phi_d, x_N],'a')
 

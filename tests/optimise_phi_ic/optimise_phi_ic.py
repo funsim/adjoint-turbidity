@@ -22,7 +22,7 @@ set_log_level(ERROR)
 # DEFINE FUNCTIONAL
 # ----------------------------------------------------------------------------------------------------
 
-(q, h, phi, phi_d, x_N, u_N) = split(model.w[0])
+(q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
 
 # get target data
 phi_d_aim = input_output.create_function_from_file('deposit_data.json', model.V)

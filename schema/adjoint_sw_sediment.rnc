@@ -165,6 +165,9 @@ c_string_choice =
 time_discretisation_choice = 
    (
       element time_discretisation {
+         attribute name { "runge_kutta" }
+      }|
+      element time_discretisation {
          attribute name { "crank_nicholson" }
       }|
       element time_discretisation {

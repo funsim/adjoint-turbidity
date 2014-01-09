@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <adjoint_sw_sediment>
   <project_name>
-    <string_value lines="1">optimise_phi_ic</string_value>
+    <string_value lines="1">generate_phi_d</string_value>
   </project_name>
   <mesh>
     <element_count>
@@ -11,13 +11,20 @@
   <time_options>
     <time_discretisation name="crank_nicholson"/>
     <timestep>
-      <real_value rank="0">5e-2</real_value>
+      <real_value rank="0">1e-2</real_value>
     </timestep>
     <finish_time>
       <real_value rank="0">2.0</real_value>
     </finish_time>
   </time_options>
-  <output_options/>
+  <output_options>
+    <plotting>
+      <plotting_interval>
+        <real_value rank="0">0.1</real_value>
+      </plotting_interval>
+      <output name="live_plotting"/>
+    </plotting>
+  </output_options>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>

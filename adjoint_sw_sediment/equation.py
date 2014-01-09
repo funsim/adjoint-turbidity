@@ -17,27 +17,30 @@ class Equation():
         w = dict()
         w[0] = split(model.w[0])
         w[1] = split(model.w[1])
+        w['int'] = split(model.w['int'])
+        w['td'] = model.w['split_td']
 
         # get functions for index
         u = dict()
         u[0] = w[0][index]
         u[1] = w[1][index]
-        u_td = model.time_discretise(u)
+        u['int'] = w['int'][index]
+        u['td'] = w['td'][index]
         v = TestFunctions(model.W)[index]
 
         # get x_N and u_N and calculate ux
         x_N = dict()
         x_N[0] = w[0][4]
         x_N[1] = w[1][4]
-        x_N_td = model.time_discretise(x_N)
+        x_N_td = w['td'][4]
         u_N = dict()
         u_N[0] = w[0][5]
         u_N[1] = w[1][5]
-        u_N_td = model.time_discretise(u_N)
+        u_N_td = w['td'][5]
         k = dict()
         k[0] = w[0][6]
         k[1] = w[1][6]
-        k_td = model.time_discretise(k)
+        k_td = w['td'][6]
 
         ux = Constant(-1.0)*u_N_td*model.y
         uxn_up = smooth_pos(ux*model.n)
@@ -51,7 +54,7 @@ class Equation():
         q = dict()
         q[0] = w[0][0]
         q[1] = w[1][0]
-        q_td = model.time_discretise(q)
+        q_td = w['td'][0]
 
         # upwind/downwind grad term
         if grad_term:
@@ -67,30 +70,33 @@ class Equation():
 
         if enable:
         # coordinate transforming advection term
-            self.F = - k_td*grad(v)[0]*ux*u_td*dx - k_td*v*grad(ux)[0]*u_td*dx
+            self.F = - k_td*grad(v)[0]*ux*u['td']*dx - k_td*v*grad(ux)[0]*u['td']*dx
 
             # surface integrals for coordinate transforming advection term
-            self.F += avg(k_td)*jump(v)*(uxn_up('+')*u_td('+') - uxn_up('-')*u_td('-'))*dS 
+            self.F += avg(k_td)*jump(v)*(uxn_up('+')*u['td']('+') - uxn_up('-')*u['td']('-'))*dS 
             if model.mms:
-                self.F += k_td*v*ux_n*u_td*(model.ds(0) + model.ds(1))
+                self.F += k_td*v*ux_n*u['td']*(model.ds(0) + model.ds(1))
             else:
                 for i, wb in enumerate(weak_b):
                     if wb != None:
                         self.F += k_td*v*ux_n*wb*model.ds(i)
                     else:
-                        self.F += k_td*v*ux_n*u_td*model.ds(i)
+                        self.F += k_td*v*ux_n*u['td']*model.ds(i)
 
             # mass term
             if not model.mms:
-                self.F += x_N_td*v*(u[0] - u[1])*dx
+                if model.time_discretise.func_name == 'runge_kutta':
+                    self.F += x_N_td*v*(u['int'] - u['td'])*dx
+                else:
+                    self.F += x_N_td*v*(u[0] - u[1])*dx
 
             # mms bc
             if model.mms:
-                self.F -= k_td*v*u_td*model.n*(model.ds(0) + model.ds(1))
+                self.F -= k_td*v*u['td']*model.n*(model.ds(0) + model.ds(1))
                 self.F += k_td*v*model.w_ic_e[index]*model.n*(model.ds(0) + model.ds(1)) 
             # bc term for zero momentum at left boundary
             if index == 0 and not model.mms:
-                self.F -= k_td*v*u_td*model.n*model.ds(0)
+                self.F -= k_td*v*u['td']*model.n*model.ds(0)
 
             # grad term
             if grad_term:

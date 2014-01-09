@@ -90,9 +90,13 @@ class Model():
         self.w = dict()
         self.w[0] = Function(self.W, name='U')
         self.w[1] = Function(self.W, name='U_1')
+        # only used in runge kutta
+        self.w['int'] = Function(self.W, name='U_int')
+        self.w['td'] = Function(self.W, name='U_td')
 
         # create ic expression
-        exp_str = 'self.w_ic_e = Expression(self.w_ic_e_cstr, self.W.ufl_element(), ' + self.w_ic_var + ')'
+        exp_str = ('self.w_ic_e = Expression(self.w_ic_e_cstr, self.W.ufl_element(), {})'
+                   .format(self.w_ic_var))
         exec exp_str in globals(), locals()
 
     def set_ic(self, ic_dict = None):
@@ -121,7 +125,9 @@ class Model():
                 L += inner(test[i], self.w_ic_e[i])*dx
 
         solve(a == L, self.w[0])
-        solve(a == L, self.w[1])
+        self.w[1].assign(self.w[0])
+        self.w['int'].assign(self.w[0])
+        self.w['td'].assign(self.w[0])
 
     def generate_form(self): 
 
@@ -135,13 +141,9 @@ class Model():
         k = dict()
         q[0], h[0], phi[0], phi_d[0], x_N[0], u_N[0], k[0] = split(self.w[0])
         q[1], h[1], phi[1], phi_d[1], x_N[1], u_N[1], k[1] = split(self.w[1])
-        q_td = self.time_discretise(q)
-        h_td = self.time_discretise(h)
-        phi_td = self.time_discretise(phi)
-        phi_d_td = self.time_discretise(phi_d)
-        x_N_td = self.time_discretise(x_N)
-        u_N_td = self.time_discretise(u_N)
-        k_td = self.time_discretise(k)
+        q['int'], h['int'], phi['int'], phi_d['int'], x_N['int'], u_N['int'], k['int'] = split(self.w['int'])
+        self.w['split_td'] = self.time_discretise(self.w)
+        q['td'], h['td'], phi['td'], phi_d['td'], x_N['td'], u_N['td'], k['td'] = self.w['split_td']
 
         # get source terms
         if self.mms:
@@ -152,30 +154,30 @@ class Model():
         # MOMENTUM 
         self.E[0] = Equation(model=self,
                              index=0, 
-                             weak_b = (0.0, u_N_td*h_td),
-                             grad_term = q_td**2.0/h_td + 0.5*phi_td*h_td, 
+                             weak_b = (0.0, u_N['td']*h['td']),
+                             grad_term = q['td']**2.0/h['td'] + 0.5*phi['td']*h['td'], 
                              enable=True)
 
         # CONSERVATION 
         self.E[1] = Equation(model=self,
                              index=1, 
-                             weak_b = (h_td, h_td),
-                             grad_term = q_td, 
+                             weak_b = (h['td'], h['td']),
+                             grad_term = q['td'], 
                              enable=True)
 
         # VOLUME FRACTION
         self.E[2] = Equation(model=self,
                              index=2, 
-                             weak_b = (phi_td, phi_td),
-                             grad_term = q_td*phi_td/h_td,
-                             source = self.beta*phi_td/h_td, 
+                             weak_b = (phi['td'], phi['td']),
+                             grad_term = q['td']*phi['td']/h['td'],
+                             source = self.beta*phi['td']/h['td'], 
                              enable=True)
         
         # DEPOSIT
         self.E[3] = Equation(model=self,
                              index=3, 
-                             weak_b = (phi_d_td, 0.0),
-                             source = -self.beta*phi_td/h_td, 
+                             weak_b = (phi_d['td'], 0.0),
+                             source = -self.beta*phi['td']/h['td'], 
                              enable=True)
         
         # NOSE LOCATION
@@ -183,25 +185,44 @@ class Model():
         if self.mms:
             F_x_N = v*(x_N[0] - x_N[1])*dx 
         else:
-            F_x_N = v*(x_N[0] - x_N[1])*dx - v*u_N_td*k_td*dx 
+            if self.time_discretise.func_name == 'runge_kutta':
+                F_x_N = v*(x_N['int'] - x_N['td'])*dx - v*u_N['td']*k['td']*dx 
+            else:
+                F_x_N = v*(x_N[0] - x_N[1])*dx - v*u_N['td']*k['td']*dx 
 
         # NOSE SPEED
         v = TestFunctions(self.W)[5]
-        F_u_N = v*(self.Fr*(phi[0])**0.5)*self.ds(1) - \
-            v*u_N[0]*self.ds(1)
+        if self.time_discretise.func_name == 'runge_kutta':
+            F_u_N = v*u_N['int']*self.ds(1) - v*(self.Fr*(phi['int'])**0.5)*self.ds(1) 
+        else:
+            F_u_N = v*u_N[0]*self.ds(1) - v*(self.Fr*(phi[0])**0.5)*self.ds(1) 
 
         # define adaptive timestep form
         def smooth_min(val, min = self.dX((0,0))/10.0):
             return (val**2.0 + min)**0.5
         v = TestFunction(self.W)[6]
         if self.adapt_timestep:
-            F_k = v*(k[0] - k[1])*dx - v*x_N_td*self.dX/smooth_min(u_N_td)*self.adapt_cfl*dx
+            if self.time_discretise.func_name == 'runge_kutta':
+                F_k = (v*(k['int'] - k['td'])*dx - 
+                       v*x_N['td']*self.dX/smooth_min(u_N['td'])*self.adapt_cfl*dx)
+            else:
+                F_k = v*(k[0] - k[1])*dx - v*x_N['td']*self.dX/smooth_min(u_N['td'])*self.adapt_cfl*dx
         else:
-            F_k = v*(k[0] - k[1])*dx 
+            if self.time_discretise.func_name == 'runge_kutta':
+                F_k = v*(k['int'] - k['td'])*dx 
+            else:
+                F_k = v*(k[0] - k[1])*dx 
 
         # combine PDE's
         self.F = self.E[0].F + self.E[1].F + self.E[2].F + self.E[3].F + F_x_N + F_u_N + F_k
 
+        if self.time_discretise.func_name == 'runge_kutta':
+            self.F_rk = self.F
+            self.J_rk = derivative(self.F_rk, self.w['int'], TrialFunction(self.W))
+            
+            v = TestFunction(self.W)
+            self.F = inner(v, (self.w[0] - 0.5*self.w[1] - 0.5*self.w['int']))*dx
+        
         # compute directional derivative about u in the direction of du (Jacobian)
         self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
 
@@ -241,10 +262,32 @@ class Model():
             # print cond, s.min(), s.max()
             
             # SOLVE COUPLED EQUATIONS
-            solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters)
+
+            # ------------------------------------ #
+
+            if self.time_discretise.func_name == 'runge_kutta':
+
+                # runge kutta (2nd order)
+                self.w['td'].assign(self.w[1])
+                solve(self.F_rk == 0, self.w['int'])
+
+                if self.slope_limit:
+                    slope_limit(self.w['int'], annotate=annotate)
+
+                self.w['td'].assign(self.w['int'])
+                solve(self.F_rk == 0, self.w['int'])
+
+                solve(self.F == 0, self.w[0])
+
+                if self.slope_limit:
+                    slope_limit(self.w[0], annotate=annotate)
+
+            else:
+
+                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters)
                 
-            if self.slope_limit:
-                slope_limit(self.w[0], annotate=annotate)
+                if self.slope_limit:
+                    slope_limit(self.w[0], annotate=annotate)
 
             self.w[1].assign(self.w[0])
 

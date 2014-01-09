@@ -236,6 +236,11 @@ the initial frontal velocity, default=0.0</a:documentation>
     <choice>
       <element name="time_discretisation">
         <attribute name="name">
+          <value>runge_kutta</value>
+        </attribute>
+      </element>
+      <element name="time_discretisation">
+        <attribute name="name">
           <value>crank_nicholson</value>
         </attribute>
       </element>

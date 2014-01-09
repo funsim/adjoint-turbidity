@@ -392,6 +392,9 @@ def set_model_ic_from_file():
 def create_function_from_file(fname, fs):
     f = open(fname, 'r')
     data = np.array(json.loads(f.readline()))
+    # catch 0d array
+    if data.shape == ():
+        data = np.array([data])
     data_ = data.copy()
     for i in range(len(data)/2):
         j = i*2
