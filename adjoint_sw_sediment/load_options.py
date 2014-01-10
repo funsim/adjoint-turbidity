@@ -34,6 +34,7 @@ def load_options(model, xml_path):
         model.adapt_cfl = Constant(libspud.get_option(option_path + 'cfl_criteria'))
     else:
         model.adapt_timestep = False
+        model.adapt_cfl = Constant(0.2)
 
     if libspud.have_option('time_options/finish_time'):
         model.finish_time = libspud.get_option('time_options/finish_time')
@@ -97,9 +98,9 @@ def load_options(model, xml_path):
         read_ic(option_path + 'height', default = '1.0'),
         read_ic(option_path + 'volume_fraction', default = '1.0'),
         read_ic(option_path + 'deposit_depth', default = '0.0'),
-        get_optional(option_path + 'initial_length', default = '1.0'),
+        read_ic(option_path + 'initial_length', default = '1.0'),
         read_ic(option_path + 'front_velocity', default = '0.0'),
-        str(libspud.get_option('time_options/timestep')),
+        read_ic(option_path + 'timestep', default = '1.0'),
         ]
     model.w_ic_var = ''
     if (libspud.have_option(option_path + 'variables') and 
@@ -130,7 +131,7 @@ def load_options(model, xml_path):
          'override':libspud.have_option(option_path + 'front_velocity/override'), 
          'FS':'R'}, 
         {'id':'timestep',
-         'override':False,
+         'override':libspud.have_option(option_path + 'timestep/override'),
          'FS':'R'}
         )
 

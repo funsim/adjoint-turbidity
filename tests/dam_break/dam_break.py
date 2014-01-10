@@ -11,11 +11,11 @@ import sys
 
 def getError(model):
 
-    q, h, phi, phi_d, x_N_model, u_N_model = model.w[0].split()
+    q, h, phi, phi_d, x_N_model, u_N_model, k_model = model.w[0].split()
 
     Fr = model.Fr((0,0))
 
-    u_N = model.Fr((0,0))/(1.0+Fr/2.0)
+    u_N = Fr/(1.0+Fr/2.0)
     h_N = (1.0/(1.0+Fr/2.0))**2.0
 
     x_N = u_N*model.t
@@ -54,48 +54,53 @@ def getError(model):
 
     return E_q, E_h, E_x_N, E_u_N
 
-# long test
-dt = [1e-1/8, 1e-1/16, 1e-1/32, 1e-1/64, 1e-1/128, 1e-1/256, 1e-1/512]
-nx = [4, 8, 16, 32, 64]
-
-# quick settings
-dt = [1e-1/64]
-nx = [16, 32, 64]
-
-# # vis settings
-# dt = [1e-1/128]
-# nx = [128]
-# model.plot = 0.1
-# model.show_plot = True
-# model.save_plot = False
-
 set_log_level(ERROR)    
 parameters["adjoint"]["stop_annotating"] = True 
 
 model = Model('dam_break.asml', error_callback=getError, no_init=True)
+model.dam_break = True
 
-h=  []
-E = []
-for dt_ in dt:
-    E.append([])
-    for nx_ in nx:
-        info_blue('N_cells:{:2}  Timestep:{}'.format(nx_, dt_))
-        h.append(1.0/nx_)
-        model.ele_count = nx_
-        model.timestep = dt_
-        model.initialise()
-        E[-1].append(model.run(annotate=False))
+nx = np.array([100, 200, 300])
+h = 1.0/nx
 
-input_output.write_array_to_file('dam_break.json', E, 'w')
+# info_red('crank nicholson')
+# model.time_discretise = time_discretisation.crank_nicholson
 
-E = E[0]
-info_green( "    h     q     x     u         h        q        x        u")
-info_green( "R = 0.00  0.00  0.00  0.00  E = %.2e %.2e %.2e %.2e" 
-            % (E[0][0], E[0][1], E[0][2], E[0][3]) ) 
-for i in range(1, len(E)):
-    rh = np.log(E[i][0]/E[i-1][0])/np.log(h[i]/h[i-1])
-    rq = np.log(E[i][1]/E[i-1][1])/np.log(h[i]/h[i-1])
-    rx = np.log(E[i][2]/E[i-1][2])/np.log(h[i]/h[i-1])
-    ru = np.log(E[i][3]/E[i-1][3])/np.log(h[i]/h[i-1])
-    info_green ( "R = %-5.2f %-5.2f %-5.2f %-5.2f E = %.2e %.2e %.2e %.2e"
-                 % (rh, rq, rx, ru, E[i][0], E[i][1], E[i][2], E[i][3]) )   
+# E = np.zeros([4, h.shape[0]])
+# r1 = np.zeros([4, h.shape[0]])
+
+# for i in range(len(h)):
+#     info_blue('N_cells:{:2}'.format(nx[i]))
+#     model.ele_count = nx[i]
+#     model.initialise()
+#     E[:, i] =  model.run(annotate=False)
+
+#     print E
+    
+#     if i > 0:
+#         r1[:, i] = np.log(E[:, i]/E[:, i-1])/np.log(h[i]/h[i - 1])
+
+# print ''
+# print r1
+# print ''
+
+info_red('runge kutta')
+model.time_discretise = time_discretisation.runge_kutta
+
+E = np.zeros([4, h.shape[0]])
+r2 = np.zeros([4, h.shape[0]])
+
+for i in range(len(h)):
+    info_blue('N_cells:{:2}'.format(nx[i]))
+    model.ele_count = nx[i]
+    model.initialise()
+    E[:, i] =  model.run(annotate=False)
+
+    print E
+    
+    if i > 0:
+        r2[:, i] = np.log(E[:, i]/E[:, i-1])/np.log(h[i]/h[i - 1])
+
+print ''
+print r2
+print ''

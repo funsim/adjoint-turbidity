@@ -29,13 +29,9 @@ characters in the project name should be avoided.</a:documentation>
             <ref name="real"/>
           </element>
         </optional>
-        <element name="timestep">
-          <a:documentation>timestep</a:documentation>
-          <ref name="real"/>
-        </element>
         <optional>
           <element name="adaptive_timestep">
-            <a:documentation>adaptive timestep</a:documentation>
+            <a:documentation>adaptive timestep </a:documentation>
             <element name="cfl_criteria">
               <ref name="real"/>
             </element>
@@ -129,17 +125,6 @@ characters in the project name should be avoided.</a:documentation>
       <element name="initial_conditions">
         <a:documentation>Options dealing with the specification of initial conditions</a:documentation>
         <optional>
-          <element name="initial_length">
-            <a:documentation>The non-dimensionalised initial length of the current, default=1.0</a:documentation>
-            <ref name="anystring"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
-          </element>
-        </optional>
-        <optional>
           <element name="height">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial height of the current, default=1.0</a:documentation>
@@ -188,9 +173,32 @@ the initial deposited sediment, default=0.0</a:documentation>
           </element>
         </optional>
         <optional>
+          <element name="initial_length">
+            <a:documentation>The non-dimensionalised initial length of the current, default=1.0</a:documentation>
+            <ref name="c_string_choice"/>
+            <optional>
+              <element name="override">
+                <empty/>
+              </element>
+            </optional>
+          </element>
+        </optional>
+        <optional>
           <element name="front_velocity">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial frontal velocity, default=0.0</a:documentation>
+            <ref name="c_string_choice"/>
+            <optional>
+              <element name="override">
+                <empty/>
+              </element>
+            </optional>
+          </element>
+        </optional>
+        <optional>
+          <element name="timestep">
+            <a:documentation>C code, or python that returns C code as a string, for expression describing 
+the initial timestep, default=1.0</a:documentation>
             <ref name="c_string_choice"/>
             <optional>
               <element name="override">

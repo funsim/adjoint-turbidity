@@ -33,6 +33,9 @@ set_log_level(ERROR)
 
 class Model():
 
+    dam_break = False
+    similarity = False
+
     def __init__(self, xml_path, error_callback=None, no_init=False):
         load_options(self, xml_path)
 
@@ -198,15 +201,14 @@ class Model():
             F_u_N = v*u_N[0]*self.ds(1) - v*(self.Fr*(phi[0])**0.5)*self.ds(1) 
 
         # define adaptive timestep form
-        def smooth_min(val, min = self.dX((0,0))/10.0):
+        def smooth_min(val, min = self.dX((0,0))/1e10):
             return (val**2.0 + min)**0.5
         v = TestFunction(self.W)[6]
         if self.adapt_timestep:
             if self.time_discretise.func_name == 'runge_kutta':
-                F_k = (v*(k['int'] - k['td'])*dx - 
-                       v*x_N['td']*self.dX/smooth_min(u_N['td'])*self.adapt_cfl*dx)
+                F_k = v*k['int']*dx - v*x_N['int']*self.dX/smooth_min(u_N['int'])*self.adapt_cfl*dx
             else:
-                F_k = v*(k[0] - k[1])*dx - v*x_N['td']*self.dX/smooth_min(u_N['td'])*self.adapt_cfl*dx
+                F_k = v*k[0]*dx - v*x_N[0]*self.dX/smooth_min(u_N[0])*self.adapt_cfl*dx
         else:
             if self.time_discretise.func_name == 'runge_kutta':
                 F_k = v*(k['int'] - k['td'])*dx 
@@ -243,7 +245,7 @@ class Model():
         # initialise plotting
         if self.plot:
             self.plotter = io.Plotter(self, rescale=True, file=self.project_name, 
-                                      similarity = False, dam_break = False, 
+                                      similarity = self.similarity, dam_break = self.dam_break, 
                                       g = self.g, h_0 = self.h_0, phi_0 = self.phi_0)
             self.plot_t = self.t + self.plot
 
@@ -269,15 +271,15 @@ class Model():
 
                 # runge kutta (2nd order)
                 self.w['td'].assign(self.w[1])
-                solve(self.F_rk == 0, self.w['int'])
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                solve(self.F_rk == 0, self.w['int'])
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk)
 
-                solve(self.F == 0, self.w[0])
+                solve(self.F == 0, self.w[0], J=self.J)
 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)

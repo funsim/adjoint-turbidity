@@ -1,25 +1,26 @@
 <?xml version='1.0' encoding='utf-8'?>
 <adjoint_sw_sediment>
   <project_name>
-    <string_value lines="1">similarity</string_value>
+    <string_value lines="1">basic_rk</string_value>
   </project_name>
-  <mesh>
-    <element_count>
-      <integer_value rank="0">16</integer_value>
-    </element_count>
-  </mesh>
+  <mesh/>
   <time_options>
     <time_discretisation name="runge_kutta"/>
+    <adaptive_timestep>
+      <cfl_criteria>
+        <real_value rank="0">0.2</real_value>
+      </cfl_criteria>
+    </adaptive_timestep>
     <finish_time>
-      <real_value rank="0">1.0</real_value>
+      <real_value rank="0">10.0</real_value>
     </finish_time>
   </time_options>
   <output_options>
     <plotting>
       <plotting_interval>
-        <real_value rank="0">0.1</real_value>
+        <real_value rank="0">2.0</real_value>
       </plotting_interval>
-      <output name="live_plotting"/>
+      <output name="save_plots"/>
     </plotting>
     <ts_info/>
   </output_options>
@@ -28,23 +29,14 @@
       <slope_limit/>
     </discretisation>
   </spatial_discretisation>
-  <non_dimensional_numbers>
-    <beta>
-      <real_value rank="0">0.0</real_value>
-    </beta>
-  </non_dimensional_numbers>
+  <non_dimensional_numbers/>
   <initial_conditions>
     <timestep>
       <c_string>
-        <string_value lines="1">dX/Fr*cfl</string_value>
+        <string_value lines="1">dX/1.19*cfl</string_value>
       </c_string>
     </timestep>
     <variables>
-      <var name="Fr">
-        <code>
-          <string_value lines="20" type="code" language="python">self.Fr((0,0))</string_value>
-        </code>
-      </var>
       <var name="dX">
         <code>
           <string_value lines="20" type="code" language="python">self.dX((0,0))</string_value>

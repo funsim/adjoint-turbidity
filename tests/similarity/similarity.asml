@@ -13,16 +13,11 @@
     <start_time>
       <real_value rank="0">0.5</real_value>
     </start_time>
-    <timestep>
-      <real_value rank="0">0.0015625</real_value>
-    </timestep>
     <finish_time>
-      <real_value rank="0">0.75</real_value>
+      <real_value rank="0">1.5</real_value>
     </finish_time>
   </time_options>
-  <output_options>
-    <ts_info/>
-  </output_options>
+  <output_options/>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>
@@ -34,9 +29,6 @@
     </beta>
   </non_dimensional_numbers>
   <initial_conditions>
-    <initial_length>
-      <string_value lines="1">K*pow(t, (2./3.))</string_value>
-    </initial_length>
     <height>
       <c_string>
         <string_value lines="1">(4./9.)*pow(K,2.0)*pow(t,-2./3.)*(1./pow(Fr,2.0) - (1./4.) + (1./4.)*pow(x[0],2.0))</string_value>
@@ -57,11 +49,21 @@
         <string_value lines="1">0.0</string_value>
       </c_string>
     </deposit_depth>
+    <initial_length>
+      <c_string>
+        <string_value lines="1">K*pow(t, (2./3.))</string_value>
+      </c_string>
+    </initial_length>
     <front_velocity>
       <c_string>
         <string_value lines="1">(2./3.)*K*pow(t,-1./3.)</string_value>
       </c_string>
     </front_velocity>
+    <timestep>
+      <c_string>
+        <string_value lines="1">(K*pow(t, (2./3.))*dX)/((2./3.)*K*pow(t,-1./3.))*cfl</string_value>
+      </c_string>
+    </timestep>
     <variables>
       <var name="K">
         <code>
@@ -76,6 +78,16 @@
       <var name="t">
         <code>
           <string_value lines="20" type="code" language="python">self.start_time</string_value>
+        </code>
+      </var>
+      <var name="dX">
+        <code>
+          <string_value lines="20" type="code" language="python">self.dX((0,0))</string_value>
+        </code>
+      </var>
+      <var name="cfl">
+        <code>
+          <string_value lines="20" type="code" language="python">self.adapt_cfl((0,0))</string_value>
         </code>
       </var>
     </variables>

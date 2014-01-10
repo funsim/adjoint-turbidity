@@ -25,22 +25,22 @@ def similarity_h(model, y):
     return (4./9.)*K**2.0*model.t**(-2./3.)*H0
 
 def dam_break_u(model, x):
-    h_N = (1.0/(1.0+model.Fr_/2.0))**2.0
+    h_N = (1.0/(1.0+model.Fr((0,0))/2.0))**2.0
     if x <= -model.t:
         return 0.0
     elif x <= (2.0 - 3.0*h_N**0.5)*model.t:
         return 2./3.*(1.+x/model.t)
     else:
-        return model.Fr_/(1.0+model.Fr_/2.0)
+        return model.Fr((0,0))/(1.0+model.Fr((0,0))/2.0)
             
 def dam_break_h(model, x):
-    h_N = (1.0/(1.0+model.Fr_/2.0))**2.0
+    h_N = (1.0/(1.0+model.Fr((0,0))/2.0))**2.0
     if x <= -model.t:
         return 1.0
     elif x <= (2.0 - 3.0*h_N**0.5)*model.t:
         return 1./9.*(2.0-x/model.t)**2.0
     else:
-        return (1.0/(1.0+model.Fr_/2.0))**2.0
+        return (1.0/(1.0+model.Fr((0,0))/2.0))**2.0
             
 class Plotter():
 
@@ -119,7 +119,7 @@ class Plotter():
             # self.phi_d_line_2, = self.phi_d_plot.plot(y, phi_d, 'k--')
 
         if self.dam_break:
-            dam_break_x = np.linspace(-1.0,(model.Fr_/(1.0+model.Fr_/2.0))*model.t,1001)
+            dam_break_x = np.linspace(-1.0,(model.Fr((0,0))/(1.0+model.Fr((0,0))/2.0))*model.t,1001)
             self.q_line_2, = self.q_plot.plot(dam_break_x + 1.0, 
                                               [dam_break_u(model, x) for x in dam_break_x], 
                                               'k--')
@@ -293,7 +293,7 @@ def timestep_info_string(model, tex=False):
 
     x_N = arr[model.W.sub(4).dofmap().cell_dofs(0)[0]]
     u_N = arr[model.W.sub(5).dofmap().cell_dofs(0)[0]]
-    h_N = arr[model.W.sub(1).dofmap().cell_dofs(n_ele - 1)[1]]
+    h_N = arr[model.W.sub(1).dofmap().cell_dofs(n_ele - 1)[-1]]
     timestep = arr[model.W.sub(6).dofmap().cell_dofs(0)[0]]
 
     q_cons = 0
