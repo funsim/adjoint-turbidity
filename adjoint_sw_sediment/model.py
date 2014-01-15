@@ -36,7 +36,8 @@ class Model():
     dam_break = False
     similarity = False
 
-    def __init__(self, xml_path, error_callback=None, no_init=False):
+    def __init__(self, xml_path, error_callback=None, 
+                 end_criteria = None, no_init=False):
         load_options(self, xml_path)
 
         ### options that aren't handled in the diamond options file ###
@@ -48,6 +49,16 @@ class Model():
         # set up
         if not no_init:
             self.initialise()
+
+        def time_finish(model):
+            if model.t >= model.finish_time:
+                return True
+            return False
+
+        if end_criteria is None: 
+            self.end_criteria = time_finish
+        else:
+            self.end_criteria = end_criteria
 
     def initialise(self):
         # initialise function spaces
@@ -228,19 +239,7 @@ class Model():
         # compute directional derivative about u in the direction of du (Jacobian)
         self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
 
-    def solve(self, nl_tol = 1e-5, annotate = True):
-
-        def time_finish(t):
-            if self.finish_time:
-                if t >= self.finish_time:
-                    return True
-            return False
-
-        def converged(du):
-            if self.tol:
-                if du < self.tol:
-                    return True
-            return False
+    def solve(self, annotate = True):
         
         # initialise plotting
         if self.plot:
@@ -255,8 +254,7 @@ class Model():
             io.write_model_to_files(self, 'a', file=self.project_name)
             self.write_t = self.write
 
-        delta = 1e10
-        while not (time_finish(self.t) or converged(delta)):
+        while not (self.end_criteria(self)):
 
             # M = assemble(self.J)
             # U, s, Vh = scipy.linalg.svd(M.array())
@@ -294,12 +292,6 @@ class Model():
             self.w[1].assign(self.w[0])
 
             timestep = (self.w[0].vector().array())[self.W.sub(6).dofmap().cell_dofs(0)[0]]
-                            
-            if self.tol:
-                delta = 0.0
-                f_list = [[self.w[0].split()[i], self.w[1].split()[i]] for i in range(len(self.w[0].split()))]
-                for f_0, f_1 in f_list:
-                    delta = max(errornorm(f_0, f_1, norm_type="L2", degree_rise=1)/timestep, delta)
 
             self.t += timestep
 
@@ -317,7 +309,7 @@ class Model():
 
             # write timestep info
             if self.ts_info == True:
-                io.print_timestep_info(self, delta)
+                io.print_timestep_info(self)
 
         if self.plot:
             self.plotter.clean_up()

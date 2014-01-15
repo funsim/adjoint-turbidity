@@ -14,7 +14,11 @@ import sys
 # GET MODEL
 # ----------------------------------------------------------------------------------------------------
 
-model = Model('optimise_phi_ic.asml')
+def end_criteria(model):        
+    y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh)
+    return not (phi > 0.1).all()
+
+model = Model('optimise_phi_ic.asml', end_criteria = end_criteria)
 set_log_level(ERROR)
 
 # ----------------------------------------------------------------------------------------------------
@@ -34,7 +38,7 @@ int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*phi_d_scale*dx
 int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*x_scale*dx
 
 # functional regularisation
-reg_scale = Constant(1e-1) 
+reg_scale = Constant(1e-2) 
 int_reg = inner(grad(phi), grad(phi))*reg_scale*dx
 
 # functional

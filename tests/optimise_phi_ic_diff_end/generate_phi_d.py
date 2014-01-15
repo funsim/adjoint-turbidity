@@ -9,7 +9,11 @@ from adjoint_sw_sediment import *
 import numpy as np
 import sys
 
-model = Model('generate_phi_d.asml')
+def end_criteria(model):        
+    y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh)
+    return not (phi > 0.1).all()
+
+model = Model('generate_phi_d.asml', end_criteria = end_criteria)
 model.set_ic()
 
 y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 

@@ -236,13 +236,15 @@ class Adjoint_Plotter():
 
         self.j_plot.set_autoscaley_on(True)
         self.dj_plot.set_autoscaley_on(True)
+        self.ic_plot.set_autoscaley_on(True)
+        self.ec_plot.set_autoscaley_on(True)
 
-        self.ic_plot.set_autoscaley_on(False)
-        self.ic_plot.set_xlim([0.0,1.0])
-        self.ic_plot.set_ylim([0.85,1.15])
-        self.ec_plot.set_autoscaley_on(False)
-        self.ec_plot.set_xlim([0.0,1.10*self.options['target_ec']['x']])
-        self.ec_plot.set_ylim([0.0,1.10*np.array(self.options['target_ec']['phi_d']).max()])
+        # self.ic_plot.set_autoscaley_on(False)
+        # self.ic_plot.set_xlim([0.0,1.0])
+        # self.ic_plot.set_ylim([0.85,1.15])
+        # self.ec_plot.set_autoscaley_on(False)
+        # self.ec_plot.set_xlim([0.0,1.10*self.options['target_ec']['x']])
+        # self.ec_plot.set_ylim([0.0,1.10*np.array(self.options['target_ec']['phi_d']).max()])
         
         if self.options['show']:
             self.fig.canvas.draw()
@@ -279,12 +281,9 @@ def write_model_to_files(model, method, file):
     write_array_to_file(file + '_u_N.json', u_N, method)
     write_array_to_file(file + '_T.json', [model.t], method)
 
-def print_timestep_info(model, delta):
+def print_timestep_info(model):
     
-    if delta < 1e10:
-        info_green("END OF TIMESTEP " + timestep_info_string(model) + " dw = {:.2e}\n".format(delta))
-    else:
-        info_green("END OF TIMESTEP " + timestep_info_string(model))
+    info_green("END OF TIMESTEP " + timestep_info_string(model))
 
 def timestep_info_string(model, tex=False):
 

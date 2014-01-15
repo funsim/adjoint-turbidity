@@ -60,6 +60,10 @@ class MyReducedFunctional(ReducedFunctional):
             # algorithm often does two forward runs for every adjoint run
             # we only want to store results from the first forward run
             if self.last_iter == self.iter:
+                # if (self.last_ic.vector().array() == value[0].vector().array()).all():
+                #     info_red('Skipping rerun as initial conditions are identical')
+                #     return self.j_log[-1] * self.scale
+                # else:
                 repeat = True
             else:
                 repeat = False
@@ -165,15 +169,21 @@ class MyReducedFunctional(ReducedFunctional):
         
         info_green('Start evaluation of dj')
         timer = dolfin.Timer("dj evaluation") 
+
+        # # algorithm often does two forward runs for every adjoint run
+        # # we only want to store results from the first forward run
+        # if self.last_iter != self.iter:
+        #     info_red('Skipping reevaluation of dj')
+        #     return self.scaled_dfunc_value 
         
-        scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
+        self.scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
 
         # plot
         if self.adj_plotter:
-            self.adj_plotter.update_plot(self.last_ic, self.model, self.j_log, scaled_dfunc_value[0])   
+            self.adj_plotter.update_plot(self.last_ic, self.model, self.j_log, self.scaled_dfunc_value[0])   
         self.iter += 1
         
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
         
-        return scaled_dfunc_value
+        return self.scaled_dfunc_value

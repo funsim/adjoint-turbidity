@@ -1,5 +1,6 @@
 *.pyc
 *.html
 *.json
+*.dat
 results
 ffc_form*
