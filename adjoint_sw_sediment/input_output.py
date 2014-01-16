@@ -82,6 +82,7 @@ class Plotter():
 
         y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)     
         y = y*x_N*self.h_0
+        
 
         self.title.set_text(timestep_info_string(model, True))
         
@@ -105,7 +106,7 @@ class Plotter():
         self.h_line, = self.h_plot.plot(y, h*self.h_0, 'r-')
         if model.beta((0,0)):
             self.phi_line, = self.phi_plot.plot(y, phi*self.phi_0, 'r-')
-            self.phi_d_line, = self.phi_d_plot.plot(y, phi_d*self.phi_0, 'r-')
+            self.phi_d_line, = self.phi_d_plot.plot(y, phi_d*self.phi_0*self.h_0, 'r-')
 
         if self.similarity:
             similarity_x = np.linspace(0.0,(27*model.Fr_**2.0/(12-2*model.Fr_**2.0))**(1./3.)*model.t**(2./3.),1001)
@@ -132,7 +133,7 @@ class Plotter():
             self.u_y_lim = (q/h*(self.g*self.h_0)**0.5).max()*1.1
             self.phi_y_lim = (phi*self.phi_0).max()*1.10
 
-        phi_d_y_lim = max((phi_d*self.phi_0).max()*1.10, 1e-10)
+        phi_d_y_lim = max((phi_d*self.phi_0*self.h_0).max()*1.10, 1e-10)
         x_lim = x_N*self.h_0
         self.q_plot.set_autoscaley_on(False)
         self.q_plot.set_xlim([0.0,x_lim])

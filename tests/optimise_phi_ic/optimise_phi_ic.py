@@ -34,7 +34,7 @@ int_0 = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*phi_d_scale*dx
 int_1 = inner(x_N-x_N_aim, x_N-x_N_aim)*x_scale*dx
 
 # functional regularisation
-reg_scale = Constant(1e-1) 
+reg_scale = Constant(1e-3) 
 int_reg = inner(grad(phi), grad(phi))*reg_scale*dx
 
 # functional
