@@ -66,13 +66,13 @@ def load_options(model, xml_path):
             raise Exception('unrecognised plotting output in options file')
         option_path = option_path + 'dimensionalise_plots/'
         if libspud.have_option(option_path):
-            model.g = libspud.get_option(option_path + 'g_prime')
-            model.h_0 = libspud.get_option(option_path + 'h_0')
-            model.phi_0 = libspud.get_option(option_path + 'phi_0')
+            model.g = Constant(libspud.get_option(option_path + 'g_prime'), name='g_prime')
+            model.h_0 = Constant(libspud.get_option(option_path + 'h_0'), name='h_0')
+            model.phi_0 = Constant(libspud.get_option(option_path + 'phi_0'), name='phi_0')
         else:
-            model.g = 1.0
-            model.h_0 = 1.0
-            model.phi_0 = 1.0    
+            model.g = Constant(1.0, name='g_prime')
+            model.h_0 = Constant(1.0, name='h_0')
+            model.phi_0 = Constant(1.0, name='phi_0')  
     else:
         model.plot = None
     

@@ -23,11 +23,6 @@ parameters["form_compiler"]["optimize"]     = False
 parameters["form_compiler"]["cpp_optimize"] = True
 dolfin.parameters["optimization"]["test_gradient"] = False
 dolfin.parameters["optimization"]["test_gradient_seed"] = 0.1
-solver_parameters = {}
-solver_parameters["linear_solver"] = "lu"
-solver_parameters["newton_solver"] = {}
-solver_parameters["newton_solver"]["maximum_iterations"] = 15
-solver_parameters["newton_solver"]["relaxation_parameter"] = 1.0
 info(parameters, False)
 set_log_level(ERROR)
 
@@ -245,7 +240,8 @@ class Model():
         if self.plot:
             self.plotter = io.Plotter(self, rescale=True, file=self.project_name, 
                                       similarity = self.similarity, dam_break = self.dam_break, 
-                                      g = self.g, h_0 = self.h_0, phi_0 = self.phi_0)
+                                      g = self.g((0,0)), h_0 = self.h_0((0,0)), 
+                                      phi_0 = self.phi_0((0,0)))
             self.plot_t = self.t + self.plot
 
         # write ic's
@@ -284,7 +280,7 @@ class Model():
 
             else:
 
-                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters)
+                solve(self.F == 0, self.w[0], J=self.J) #, solver_parameters=solver_parameters)
                 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)

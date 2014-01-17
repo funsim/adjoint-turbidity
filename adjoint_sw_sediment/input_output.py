@@ -81,8 +81,7 @@ class Plotter():
     def update_plot(self, model):
 
         y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)     
-        y = y*x_N*self.h_0
-        
+        y = y*x_N*self.h_0        
 
         self.title.set_text(timestep_info_string(model, True))
         
@@ -159,7 +158,7 @@ class Plotter():
 
 class Adjoint_Plotter():
 
-    # targe phi options
+    # target phi options
     target_ic = {
         'phi':None,
         }
@@ -197,11 +196,17 @@ class Adjoint_Plotter():
         self.j_plot = self.fig.add_subplot(223) 
         self.dj_plot = self.fig.add_subplot(224) 
 
-    def update_plot(self, ic, model, j_arr, dj):  
+    def update_plot(self, model, ic, j_arr, dj):  
         
         # ic and dj arrive as P1CG function - convert to input/output format
-        ic_io = map_function_to_array(ic, model.mesh)
-        dj_io = map_function_to_array(dj, model.mesh)
+        if ic.has_key('volume_fraction'):
+            ic_io = map_function_to_array(ic['volume_fraction'], model.mesh)
+        else:
+            ic_io = None
+        if hasattr(dj, 'vector'):
+            dj_io = map_function_to_array(dj, model.mesh)
+        else:
+            dj_io = None
 
         self.ic_plot.clear()
         self.ec_plot.clear()
@@ -226,14 +231,16 @@ class Adjoint_Plotter():
             self.target_phi_d_line, = self.ec_plot.plot(y*self.options['target_ec']['x'], 
                                                         self.options['target_ec']['phi_d'], 'r-')
 
-        self.phi_line, = self.ic_plot.plot(y, ic_io, 'b-')
+        if ic_io is not None:
+            self.phi_line, = self.ic_plot.plot(y, ic_io, 'b-')
         self.phi_d_line, = self.ec_plot.plot(y*x_N, phi_d, 'b-')
 
         if all(e > 0.0 for e in j_arr):
             self.j_plot.set_yscale('log')
         self.j_line, = self.j_plot.plot(j_arr, 'r-')
 
-        self.dj_line, = self.dj_plot.plot(y, dj_io)
+        if dj_io is not None:
+            self.dj_line, = self.dj_plot.plot(y, dj_io)
 
         self.j_plot.set_autoscaley_on(True)
         self.dj_plot.set_autoscaley_on(True)

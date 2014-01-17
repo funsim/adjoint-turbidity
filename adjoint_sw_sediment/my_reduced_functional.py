@@ -16,13 +16,16 @@ def generate_functional(components):
 class MyReducedFunctional(ReducedFunctional):
 
     def __init__(self, model, functional, scaled_parameters, parameter, scale = 1.0, eval_cb = None, 
-                 derivative_cb = None, replay_cb = None, hessian_cb = None, ignore = [], cache = None, 
-                 adj_plotter = None, dump_ic = False, dump_ec = False):
+                 derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, 
+                 ignore = [], cache = None, adj_plotter = None, dump_ic = False, dump_ec = False):
 
         # functional setup
         self.functional = functional
         self.scaled_parameters = scaled_parameters
         self.first_run = True
+
+        # prep_target_cb
+        self.prep_target_cb = prep_target_cb
 
         # call super.init()
         super(MyReducedFunctional, self).__init__(functional, parameter, scale = scale, 
@@ -60,24 +63,10 @@ class MyReducedFunctional(ReducedFunctional):
             # algorithm often does two forward runs for every adjoint run
             # we only want to store results from the first forward run
             if self.last_iter == self.iter:
-                # if (self.last_ic.vector().array() == value[0].vector().array()).all():
-                #     info_red('Skipping rerun as initial conditions are identical')
-                #     return self.j_log[-1] * self.scale
-                # else:
                 repeat = True
             else:
                 repeat = False
-
             self.last_iter = self.iter
-            self.last_ic = value[0]
-
-            # dump ic
-            dumpable_ic = []
-            if self.dump_ic and not repeat:
-                for val in value:
-                    dumpable_ic.append(list(val.vector().array()))
-                input_output.write_array_to_file('ic_adj_latest.json',dumpable_ic,'w')
-                input_output.write_array_to_file('ic_adj.json',dumpable_ic,'a')
 
             info_blue('Start evaluation of j')
             timer = dolfin.Timer("j evaluation") 
@@ -90,6 +79,41 @@ class MyReducedFunctional(ReducedFunctional):
             # initialise functional
             j = 0
 
+            # replace parameters
+            for i in range(len(value)):
+                replace_ic_value(self.parameter[i], value[i])
+
+            # create ic_dict for model
+            ic_dict = {}
+            i_val = 0
+            for override in self.model.override_ic:
+                if override['override']:
+                    if override['FS'] == 'CG':
+                        fs = FunctionSpace(self.model.mesh, 'CG', 1)
+                    else:
+                        fs = FunctionSpace(self.model.mesh, 'R', 0)
+
+                    v = TestFunction(fs)
+                    u = TrialFunction(fs)
+                    a = v*u*dx
+                    L = v*override['function']*dx
+                    ic_dict[override['id']] = Function(fs, name='ic_' + override['id'])
+                    solve(a==L, ic_dict[override['id']])
+
+                    # dump ic
+                    if self.dump_ic and not repeat:
+                        dumpable_ic = ic_dict[override['id']].vector().array()
+                        input_output.write_array_to_file('ic_adj_latest_{}.json'.format(override['id']),
+                                                         dumpable_ic,'w')
+                        input_output.write_array_to_file('ic_adj_{}.json'.format(override['id']),
+                                                         dumpable_ic,'a')
+
+                    i_val += 1
+
+            # set model ic
+            self.last_ic = ic_dict
+            self.model.set_ic(ic_dict = ic_dict)
+
             # calculate functional value for ic
             f = 0
             for term in self.functional.timeform.terms:
@@ -99,25 +123,11 @@ class MyReducedFunctional(ReducedFunctional):
                 for param in self.scaled_parameters:
                     if param.time == timeforms.START_TIME:
                         param.parameter.assign(param.value/assemble(param.term))
-            j += assemble(f)
-
-            # create ic_dict for model
-            ic_dict = {}
-            i_val = 0
-            for override in self.model.override_ic:
-                if override['override']:
-                    if override['FS'] == 'CG':
-                        ic_dict[override['id']] = project(value[i_val], 
-                                                          FunctionSpace(self.model.mesh, 'CG', 1), 
-                                                          name='ic_' + override['id'])
-                    else:
-                        ic_dict[override['id']] = project(value[i_val], 
-                                                          FunctionSpace(self.model.mesh, 'R', 0), 
-                                                          name='ic_' + override['id'])
-                    i_val += 1
+            if f != 0:
+                j += assemble(f)
 
             # run forward model
-            self.model.run(ic_dict = ic_dict)
+            self.model.solve()
 
             # dolfin.parameters["adjoint"]["stop_annotating"] = True
             timer.stop()
@@ -125,11 +135,17 @@ class MyReducedFunctional(ReducedFunctional):
 
             # dump results
             if self.dump_ec and not repeat:
-                y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(self.model.w[0], self.model.y, self.model.mesh) 
+                y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(self.model.w[0], 
+                                                                              self.model.y, 
+                                                                              self.model.mesh) 
                 input_output.write_array_to_file('ec_adj_latest.json',[phi_d, x_N],'w')
                 input_output.write_array_to_file('ec_adj.json',[phi_d, x_N],'a')
 
-            # calculate functional value for ic
+            # prepare target
+            if self.prep_target_cb is not None:
+                self.prep_target_cb(self.model)
+
+            # calculate functional value for ec
             f = 0
             for term in self.functional.timeform.terms:
                 if term.time == timeforms.FINISH_TIME:
@@ -170,20 +186,34 @@ class MyReducedFunctional(ReducedFunctional):
         info_green('Start evaluation of dj')
         timer = dolfin.Timer("dj evaluation") 
 
-        # # algorithm often does two forward runs for every adjoint run
-        # # we only want to store results from the first forward run
-        # if self.last_iter != self.iter:
-        #     info_red('Skipping reevaluation of dj')
-        #     return self.scaled_dfunc_value 
-        
         self.scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
 
         # plot
         if self.adj_plotter:
-            self.adj_plotter.update_plot(self.last_ic, self.model, self.j_log, self.scaled_dfunc_value[0])   
+            self.adj_plotter.update_plot(self.model, self.last_ic, self.j_log, self.scaled_dfunc_value[0])   
         self.iter += 1
         
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
         
         return self.scaled_dfunc_value
+
+def replace_ic_value(parameter, new_value):
+    ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
+
+    # import IPython
+    # IPython.embed()
+
+    # Case 1: The parameter value and new_vale are Functions
+    if hasattr(new_value, 'vector'):
+        function = parameter.coeff
+        function.assign(new_value)
+
+    # # Case 2: The parameter value and new_value are Constants
+    # elif hasattr(new_value, "value_size"): 
+    #     constant = parameter.data()
+    #     constant.assign(new_value(()))
+
+    else:
+        raise NotImplementedError, "Can only replace dolfin.Functions" # or dolfin.Constants"
+

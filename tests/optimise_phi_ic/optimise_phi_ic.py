@@ -38,7 +38,8 @@ reg_scale = Constant(1e-3)
 int_reg = inner(grad(phi), grad(phi))*reg_scale*dx
 
 # functional
-functional = Functional(int_reg*dt[START_TIME] + (int_0 + int_1)*dt[FINISH_TIME])
+# functional = Functional(int_reg*dt[START_TIME] + (int_0 + int_1)*dt[FINISH_TIME])
+functional = Functional((int_0 + int_1)*dt[FINISH_TIME])
 
 class scaled_parameter():
     def __init__(self, parameter, value, term, time):
@@ -69,6 +70,7 @@ for i, override in enumerate(model.override_ic):
         else:
             p = project(model.w_ic_e[i], FunctionSpace(model.mesh, 'R', 0), name='ic_' + override['id'])
         parameters.append(InitialConditionParameter(p))
+        override['function'] = p
 
 # get target ic
 phi_aim = input_output.create_function_from_file('phi_ic.json', model.V)

@@ -2,5 +2,6 @@
 *.html
 *.json
 *.dat
+*.png
 results
 ffc_form*

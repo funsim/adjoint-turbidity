@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <adjoint_sw_sediment>
   <project_name>
-    <string_value lines="1">optimise_phi_ic</string_value>
+    <string_value lines="1">bed_4</string_value>
   </project_name>
   <mesh/>
   <time_options>
@@ -15,26 +15,7 @@
       <real_value rank="0">100000.0</real_value>
     </finish_time>
   </time_options>
-  <output_options>
-    <plotting>
-      <plotting_interval>
-        <real_value rank="0">2.0</real_value>
-      </plotting_interval>
-      <output name="live_plotting"/>
-      <dimensionalise_plots>
-        <g_prime>
-          <real_value rank="0">1.58922</real_value>
-        </g_prime>
-        <h_0>
-          <real_value rank="0">456.95</real_value>
-        </h_0>
-        <phi_0>
-          <real_value rank="0">0.05</real_value>
-        </phi_0>
-      </dimensionalise_plots>
-    </plotting>
-    <ts_info/>
-  </output_options>
+  <output_options/>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>
@@ -46,6 +27,7 @@
       <c_string>
         <string_value lines="1">10.0</string_value>
       </c_string>
+      <override/>
     </initial_length>
     <front_velocity>
       <c_string>
