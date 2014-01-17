@@ -6,9 +6,6 @@
   <mesh/>
   <time_options>
     <time_discretisation name="crank_nicholson"/>
-    <timestep>
-      <real_value rank="0">0.01</real_value>
-    </timestep>
     <adaptive_timestep>
       <cfl_criteria>
         <real_value rank="0">0.1</real_value>
@@ -18,12 +15,20 @@
       <real_value rank="0">0.03</real_value>
     </finish_time>
   </time_options>
-  <output_options/>
+  <output_options>
+    <ts_info/>
+  </output_options>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>
     </discretisation>
   </spatial_discretisation>
   <non_dimensional_numbers/>
-  <initial_conditions/>
+  <initial_conditions>
+    <timestep>
+      <c_string>
+        <string_value lines="1">0.001</string_value>
+      </c_string>
+    </timestep>
+  </initial_conditions>
 </adjoint_sw_sediment>

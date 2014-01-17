@@ -23,6 +23,10 @@ parameters["form_compiler"]["optimize"]     = False
 parameters["form_compiler"]["cpp_optimize"] = True
 dolfin.parameters["optimization"]["test_gradient"] = False
 dolfin.parameters["optimization"]["test_gradient_seed"] = 0.1
+solver_parameters = {}
+solver_parameters["newton_solver"] = {}
+solver_parameters["newton_solver"]["maximum_iterations"] = 15
+solver_parameters["newton_solver"]["relaxation_parameter"] = 1.0
 info(parameters, False)
 set_log_level(ERROR)
 
@@ -280,7 +284,7 @@ class Model():
 
             else:
 
-                solve(self.F == 0, self.w[0], J=self.J) #, solver_parameters=solver_parameters)
+                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters)
                 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)
