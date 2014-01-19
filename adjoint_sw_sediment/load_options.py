@@ -99,7 +99,7 @@ def load_options(model, xml_path):
         read_ic(option_path + 'volume_fraction', default = '1.0'),
         read_ic(option_path + 'deposit_depth', default = '0.0'),
         read_ic(option_path + 'initial_length', default = '1.0'),
-        read_ic(option_path + 'front_velocity', default = '0.0'),
+        read_ic(option_path + 'front_velocity', default = '1.19'),
         read_ic(option_path + 'timestep', default = '1.0'),
         ]
     model.w_ic_var = ''

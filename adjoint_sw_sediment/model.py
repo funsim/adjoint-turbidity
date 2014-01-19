@@ -20,7 +20,7 @@ from load_options import load_options
 # DOLFIN SETTINGS
 
 parameters["form_compiler"]["optimize"]     = False
-parameters["form_compiler"]["cpp_optimize"] = True
+parameters["form_compiler"]["cpp_optimize"] = False
 dolfin.parameters["optimization"]["test_gradient"] = False
 dolfin.parameters["optimization"]["test_gradient_seed"] = 0.1
 solver_parameters = {}
@@ -211,7 +211,7 @@ class Model():
             F_u_N = v*u_N[0]*self.ds(1) - v*(self.Fr*(phi[0])**0.5)*self.ds(1) 
 
         # define adaptive timestep form
-        def smooth_min(val, min = self.dX((0,0))/1e10):
+        def smooth_min(val, min = self.dX((0,0))/1e2):
             return (val**2.0 + min)**0.5
         v = TestFunction(self.W)[6]
         if self.adapt_timestep:

@@ -129,7 +129,7 @@ start =
                element override { empty }?
             }?,
             ## C code, or python that returns C code as a string, for expression describing 
-            ## the initial frontal velocity, default=0.0
+            ## the initial frontal velocity, default=1.19
             element front_velocity {
                c_string_choice,
                element override { empty }?

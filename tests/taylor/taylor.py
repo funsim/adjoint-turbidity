@@ -9,7 +9,7 @@ from adjoint_sw_sediment import *
 import numpy as np
 import sys
 
-set_log_level(ERROR) 
+set_log_level(PROGRESS) 
 
 model = Model('taylor.asml', no_init=True)
 
@@ -17,8 +17,10 @@ info_blue('Taylor test for beta')
 
 info_green('Running forward model')
 # ic = project(Expression('0.5'), model.phi_FS)
-ic = Constant(5e-3)
-model.beta = ic
+# ic = Constant(5e-3)
+# model.beta = ic
+ic = Constant(0.1)
+model.adapt_cfl = ic
 model.initialise()
 model.run()
 

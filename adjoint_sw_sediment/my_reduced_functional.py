@@ -83,9 +83,14 @@ class MyReducedFunctional(ReducedFunctional):
             for i in range(len(value)):
                 replace_ic_value(self.parameter[i], value[i])
 
+            # clear last ic
+            if self.dump_ic and not repeat:
+                input_output.clear_file('ic_adj_latest.json')
+
             # create ic_dict for model
             ic_dict = {}
             i_val = 0
+            
             for override in self.model.override_ic:
                 if override['override']:
                     if override['FS'] == 'CG':
@@ -104,9 +109,9 @@ class MyReducedFunctional(ReducedFunctional):
                     if self.dump_ic and not repeat:
                         dumpable_ic = ic_dict[override['id']].vector().array()
                         input_output.write_array_to_file('ic_adj_latest_{}.json'.format(override['id']),
-                                                         dumpable_ic,'w')
+                                                         [dumpable_ic],'a')
                         input_output.write_array_to_file('ic_adj_{}.json'.format(override['id']),
-                                                         dumpable_ic,'a')
+                                                         [dumpable_ic],'a')
 
                     i_val += 1
 

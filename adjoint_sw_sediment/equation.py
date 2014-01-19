@@ -29,17 +29,8 @@ class Equation():
         v = TestFunctions(model.W)[index]
 
         # get x_N and u_N and calculate ux
-        x_N = dict()
-        x_N[0] = w[0][4]
-        x_N[1] = w[1][4]
         x_N_td = w['td'][4]
-        u_N = dict()
-        u_N[0] = w[0][5]
-        u_N[1] = w[1][5]
         u_N_td = w['td'][5]
-        k = dict()
-        k[0] = w[0][6]
-        k[1] = w[1][6]
         k_td = w['td'][6]
 
         ux = Constant(-1.0)*u_N_td*model.y

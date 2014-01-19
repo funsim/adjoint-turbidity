@@ -226,10 +226,10 @@ class Adjoint_Plotter():
 
         if self.options['target_ic']['phi'] is not None:
             self.target_phi_line, = self.ic_plot.plot(y, 
-                                                      self.options['target_ic']['phi'], 'r-')
+                                                      self.options['target_ic']['phi'][::-1], 'r-')
         if self.options['target_ec']['phi_d'] is not None:
             self.target_phi_d_line, = self.ec_plot.plot(y*self.options['target_ec']['x'], 
-                                                        self.options['target_ec']['phi_d'], 'r-')
+                                                        self.options['target_ec']['phi_d'][::-1], 'r-')
 
         if ic_io is not None:
             self.phi_line, = self.ic_plot.plot(y, ic_io, 'b-')
