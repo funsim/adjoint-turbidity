@@ -19,12 +19,10 @@
       </cfl_criteria>
     </adaptive_timestep>
     <finish_time>
-      <real_value rank="0">10.0</real_value>
+      <real_value rank="0">5.25</real_value>
     </finish_time>
   </time_options>
-  <output_options>
-    <ts_info/>
-  </output_options>
+  <output_options/>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>

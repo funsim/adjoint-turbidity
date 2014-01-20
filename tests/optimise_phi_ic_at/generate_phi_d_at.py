@@ -10,10 +10,14 @@ import numpy as np
 import sys
 
 def end_criteria(model):        
-    y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh)
-    return not (phi > 0.1).all()
+    model.ts += 1
+    if model.ts > 5:
+        model.ts = 1
+        return True
+    return False
 
-model = Model('generate_phi_d.asml', end_criteria = end_criteria)
+model = Model('generate_phi_d_at.asml', end_criteria = end_criteria)
+model.ts = 1
 model.set_ic()
 
 y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 

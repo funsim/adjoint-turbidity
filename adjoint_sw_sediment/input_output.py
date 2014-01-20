@@ -226,10 +226,10 @@ class Adjoint_Plotter():
 
         if self.options['target_ic']['phi'] is not None:
             self.target_phi_line, = self.ic_plot.plot(y, 
-                                                      self.options['target_ic']['phi'][::-1], 'r-')
+                                                      self.options['target_ic']['phi'], 'r-')
         if self.options['target_ec']['phi_d'] is not None:
             self.target_phi_d_line, = self.ec_plot.plot(y*self.options['target_ec']['x'], 
-                                                        self.options['target_ec']['phi_d'][::-1], 'r-')
+                                                        self.options['target_ec']['phi_d'], 'r-')
 
         if ic_io is not None:
             self.phi_line, = self.ic_plot.plot(y, ic_io, 'b-')
@@ -405,11 +405,10 @@ def create_function_from_file(fname, fs):
     data_ = data.copy()
     for i in range(len(data)/2):
         j = i*2
-        data_[j] = data[-(j+2)]
-        data_[j+1] = data[-(j+1)]
-    data = data_
+        data_[j] = data[j+1]
+        data_[j+1] = data[j]
     fn = Function(fs)
-    fn.vector()[:] = data
+    fn.vector()[:] = data_
     f.close()
     return fn
 
