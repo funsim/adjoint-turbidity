@@ -88,8 +88,7 @@ class MyReducedFunctional(ReducedFunctional):
             replace_ic_value(self.parameter[i], value[i])
 
         # create ic_dict for model
-        ic_dict = {}
-        i_val = 0            
+        ic_dict = {}       
         for override in self.model.override_ic:
             if override['override']:
                 if override['FS'] == 'CG':
@@ -111,8 +110,6 @@ class MyReducedFunctional(ReducedFunctional):
                                                      [dumpable_ic],'w')
                     input_output.write_array_to_file('ic_adj_{}.json'.format(override['id']),
                                                      [dumpable_ic],'a')
-
-                i_val += 1
 
         # set model ic
         self.last_ic = ic_dict
@@ -161,6 +158,15 @@ class MyReducedFunctional(ReducedFunctional):
                     print assemble(param.term), param.parameter.vector().array()
         j += assemble(f)
 
+        # print 'V=', value[0]((0)), 'R=', value[1]((0)), 'PHI_0=', value[2]((0))
+        print 'V=', value[0]((0)), 'R=', value[1]((0)), 'PHI_0=', value[2]((0))
+        y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(self.model.w[0], 
+                                                                      self.model.y, 
+                                                                      self.model.mesh) 
+
+        print 'dim phi_d max:', phi_d.max() * self.model.h_0.vector().array()[0] * self.model.phi_0.vector().array()[0]
+        print 'dim phi_d_aim max:', self.model.phi_d_aim.vector().array().max() * self.model.h_0.vector().array()[0] * self.model.phi_0.vector().array()[0]
+
         # dump functional
         if not repeat:
             self.j_log.append(j)
@@ -186,6 +192,9 @@ class MyReducedFunctional(ReducedFunctional):
         timer = dolfin.Timer("dj evaluation") 
 
         self.scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
+        value = self.scaled_dfunc_value
+        print 'dV=', value[0]((0)), 'dR=', value[1]((0)), 'dPHI_0=', value[2]((0))
+        # print 'dV=', value[0]((0)), 'dR=', value[1]((0)), 'dPHI_0=', value[2]((0))
 
         # plot
         if self.adj_plotter:
