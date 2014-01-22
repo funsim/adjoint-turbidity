@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 from dolfin import *
-from dolfin_adjoint import *
-from dolfin_adjoint.adjglobals import adjointer
+# from dolfin_adjoint import *
+# from dolfin_adjoint.adjglobals import adjointer
 
 from adjoint_sw_sediment import *
 
@@ -16,20 +16,16 @@ import sys
 
 def end_criteria(model):        
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
-    F = phi*dx
+    x_N_start = split(model.w['ic'])[4]
+
+    F = phi*(x_N/x_N_start)*dx
     int_phi = assemble(F)
     # print int_phi
     return int_phi < 0.01
 
-model = Model('bed_4.asml', end_criteria = end_criteria)
-set_log_level(ERROR)
-
 # ----------------------------------------------------------------------------------------------------
-# CREATE TARGET FUNCTIONAL
+# CREATE TARGET coefficients
 # ----------------------------------------------------------------------------------------------------
-
-# create function
-model.phi_d_aim = Function(model.V, name='phi_d_aim')
 
 # raw data
 phi_d_x = np.array([100,2209.9255583127,6917.3697270472,10792.3076923077,16317.1215880893,20070.9677419355,24657.3200992556,29016.6253101737,32013.6476426799,35252.8535980149,37069.2307692308,39718.1141439206,44410.4218362283,50041.1910669975,54900,79310,82770.0576368876,86477.2622478386,89875.5331412104,97907.8097982709,105013.285302594,112180.547550432,118019.39481268,128461.354466859,132910])
@@ -51,7 +47,7 @@ def fit(n_coeff):
        coeff_C.append(Constant(c))
    return coeff_C
 
-model.ec_coeff = fit(10)
+ec_coeff = fit(10)
 
 # filter at measurement locations
 # def smooth_min(val, min = model.dX((0,0))/1e10):
@@ -59,89 +55,107 @@ model.ec_coeff = fit(10)
 #     filter = exp(smooth_min(x)**-2 - loc)-1
 # for phi_d_loc in zip(phi_d_x, phi_d_y):
 
-# ----------------------------------------------------------------------------------------------------
-# DEFINE FUNCTIONAL
-# ----------------------------------------------------------------------------------------------------
+# multiprocessing
+def one_shot(value):
 
-(q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
+    model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
+    set_log_level(ERROR)
 
-# form functional integrals
-phi_d_scale = Constant(1.0)
-int_0 = inner(phi_d-model.phi_d_aim, phi_d-model.phi_d_aim)*phi_d_scale*dx
+    model.initialise_function_spaces()
 
-# functional
-functional = Functional(int_0*dt[FINISH_TIME])
+    V = project(Expression(str(value[0])), model.R) #, name="V")
+    R = project(Expression(str(value[1])), model.R) #, name="R")
+    PHI_0 = project(Expression(str(value[2])), model.R) #, name="phi_0")
+    H_0 = Function(model.R) #, name='h_0')
 
-class scaled_parameter():
-    def __init__(self, parameter, value, term, time):
-        self.parameter = parameter
-        self.value = value
-        self.term = term
-        self.time = time
-
-scaled_parameters = [
-    scaled_parameter(phi_d_scale, 1e-0, 
-                     inner(phi_d-model.phi_d_aim, phi_d-model.phi_d_aim)*dx, 
-                     timeforms.FINISH_TIME)
-    ]
-
-# ----------------------------------------------------------------------------------------------------
-# OPTIMISE
-# ----------------------------------------------------------------------------------------------------
-
-V = project(Expression('100000.0'), model.R, name="V")
-R = project(Expression('10.0'), model.R, name="R")
-for override in model.override_ic:
-    if override['id'] == 'initial_length':
-        override['function'] = R
-
-model.h_0 = Function(model.R, name='h_0')
-model.phi_0 = project(Expression('0.05'), model.R)
-
-# callback to solve for target
-def prep_target_cb(model):
-
+    # calculate h_0
     v = TestFunction(model.R)
     u = TrialFunction(model.R)
-
-    L = v*(V/(model.phi_0*R))**0.5*dx
+    L = v*(V/(PHI_0*R))**0.5*dx
     a = v*u*dx
-    solve(a==L, model.h_0)
+    solve(a==L, H_0)
 
-    print 'h_0', model.h_0.vector().array()
+    # calculate sensible beta
+    model.beta = Function(model.R)
+    D = Constant(2.5e-4)
+    model.g = Constant(15.8922)
+    beta_dim = (model.g*D**2)/Constant(18*1e-6)    # Ferguson2004
+    L = v*beta_dim*dx
+    a = v*u*(model.g*H_0)**0.5*dx
+    solve(a==L, model.beta)
 
-    y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-    print 'final dim x_N', x_N*model.h_0.vector().array()[0]
+    # now beta is calculated
+    model.generate_form()
+    
+    for override in model.override_ic:
+        if override['id'] == 'initial_length':
+            override['function'] = R
+        if override['id'] == 'timestep':
+            override['function'] = model.dX*R/model.Fr*model.adapt_cfl
+
+    # create ic_dict for model
+    ic_dict = {}       
+    for override in model.override_ic:
+        if override['override']:
+            if override['FS'] == 'CG':
+                fs = FunctionSpace(model.mesh, 'CG', 1)
+            else:
+                fs = FunctionSpace(model.mesh, 'R', 0)
+
+            v = TestFunction(fs)
+            u = TrialFunction(fs)
+            a = v*u*dx
+            L = v*override['function']*dx
+            ic_dict[override['id']] = Function(fs) #, name='ic_' + override['id'])
+            solve(a==L, ic_dict[override['id']])
+    
+    model.set_ic(ic_dict = ic_dict)
+    model.solve()
 
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
 
+    phi_d_aim = Function(model.V)
     v = TestFunction(model.V)
     u = TrialFunction(model.V)
-
     L = 0
-    for i, c in enumerate(model.ec_coeff):
-        L += v*c*pow(x_N*model.y*model.h_0, i)*dx
-    a = v*u*(model.h_0*model.phi_0)*dx
+    for i, c in enumerate(ec_coeff):
+        L += v*c*pow(x_N*model.y*H_0, i)*dx
+    a = v*u*dx
+    solve(a==L, phi_d_aim)
+    
+    phi_d_dim = phi_d*H_0*PHI_0
+    f = inner(phi_d-phi_d_aim, phi_d-phi_d_aim)*dx
 
-    solve(a==L, model.phi_d_aim)
+    val = assemble(f)
 
-    print 'phi_d_aim', model.phi_d_aim.vector().array()
+    int_phi_d_aim = assemble(phi_d_aim*dx)
+    int_phi_d_dim = assemble(phi_d*H_0*PHI_0*dx)
+    int_diff = assemble((phi_d_aim-phi_d*H_0*PHI_0)*dx)  
 
-# appears to be required to get optimisation to start
-prep_target_cb(model)
+    y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
+    # print 'h_0', H_0.vector().array()
+    # print 'final dim x_N', x_N*H_0.vector().array()[0]
+    # print 'dim phi_d max:', phi_d.max() * H_0.vector().array()[0] * PHI_0.vector().array()[0]
+    # print 'dim phi_d_aim max:', phi_d_aim.vector().array().max()
 
-parameters = [InitialConditionParameter(V), InitialConditionParameter(R), InitialConditionParameter(model.phi_0)]
 
-adj_plotter_options = input_output.Adjoint_Plotter.options
-adj_plotter_options['target_ec']['phi_d'] = input_output.map_function_to_array(model.phi_d_aim, model.mesh)
-adj_plotter_options['save'] = True
-adj_plotter_options['show'] = False
-#adj_plotter = input_output.Adjoint_Plotter(options = adj_plotter_options)
+    # print 'int_phi_d_dim', int_phi_d_dim
+    # print 'int_phi_d_aim', int_phi_d_aim
+    # print 'int(phi_d_aim-phi_d_dim)', int_diff
 
-reduced_functional = MyReducedFunctional(model, functional, scaled_parameters, parameters, 
-                                         dump_ic=True, dump_ec=True, adj_plotter=None,
-                                         scale = 1e-4, prep_target_cb=prep_target_cb)
+    return (
+        value, 
+        [val, x_N*H_0.vector().array()[0], phi_d.max()*H_0.vector().array()[0]*PHI_0.vector().array()[0]], 
+        [H_0.vector().array()[0], model.beta.vector().array()[0]]
+        )
 
-m_opt = minimize(reduced_functional, method = "L-BFGS-B", 
-                 options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
-                 in_euclidian_space = False) 
+if __name__=="__main__":
+    args = eval(sys.argv[1])
+    try:
+        print one_shot(args)
+    except:
+        print (
+        args, 
+        [0, 0, 0], 
+        [0, 0]
+        )

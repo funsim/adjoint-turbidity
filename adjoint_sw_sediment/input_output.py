@@ -302,54 +302,30 @@ def timestep_info_string(model, tex=False):
     u_N = arr[model.W.sub(5).dofmap().cell_dofs(0)[0]]
     h_N = arr[model.W.sub(1).dofmap().cell_dofs(n_ele - 1)[-1]]
     timestep = arr[model.W.sub(6).dofmap().cell_dofs(0)[0]]
-
-    q_cons = 0
-    h_cons = 0
-    phi_cons = 0
-    sus = 0
     
-    DX = x_N*model.dX((0,0))
-    
-    for b in range(n_ele):
-        q_indices = model.W.sub(0).dofmap().cell_dofs(b)
-        h_indices = model.W.sub(1).dofmap().cell_dofs(b)
-        phi_indices = model.W.sub(2).dofmap().cell_dofs(b)
-        phi_d_indices = model.W.sub(3).dofmap().cell_dofs(b)
-
-        q_i = np.array([arr[index] for index in q_indices])
-        h_i = np.array([arr[index] for index in h_indices])
-        phi_i = np.array([arr[index] for index in phi_indices])
-        phi_d_i = np.array([arr[index] for index in phi_d_indices])
-
-        q_c = q_i.mean()
-        h_c = h_i.mean()
-        phi_c = phi_i.mean()
-        phi_d_c = phi_d_i.mean()
-        
-        q_cons += q_c*DX
-        h_cons += h_c*DX
-        phi_cons += (phi_c + phi_d_c)*DX
-        
-        sus += phi_c*DX
+    phi = split(model.w[0])[2]
+    x_N_end = split(model.w[0])[4]
+    x_N_start = model.w_ic_e[4]
+    phi_int = assemble(phi*(x_N_end/x_N_start)*dx)
 
     if tex:
         if model.beta((0,0)):
             return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
-                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}"#, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
-                    .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
+                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
+                    .format(x_N, u_N, h_N, phi_int))
         else:
             return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
-                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}"#, h = {4:.2e}"
-                    .format(x_N, u_N, h_N, q_cons, h_cons))
+                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
+                    .format(x_N, u_N, h_N, phi_int))
     else:
         if model.beta((0,0)):
             return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
-                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}"#, h = {4:.2e}, phi = {5:.2e}, sus = {6:.2e}"
-                .format(x_N, u_N, h_N, q_cons, h_cons, phi_cons, sus))
+                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.2e}"
+                .format(x_N, u_N, h_N, phi_int))
         else:
             return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
-                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}"#, h = {4:.2e}"
-                .format(x_N, u_N, h_N, q_cons, h_cons))
+                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.2e}"
+                .format(x_N, u_N, h_N, phi_int))
 
 def map_to_arrays(w, x, mesh):
 

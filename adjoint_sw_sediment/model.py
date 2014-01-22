@@ -83,6 +83,7 @@ class Model():
             def inside(self, x, on_boundary):
                 return x[0] < 0.5 + DOLFIN_EPS and on_boundary
         left_boundary = LeftBoundary()
+        self.l_bc = left_boundary
         exterior_facet_domains = FacetFunction("uint", self.mesh)
         exterior_facet_domains.set_all(1)
         left_boundary.mark(exterior_facet_domains, 0)
@@ -106,6 +107,8 @@ class Model():
         # only used in runge kutta
         self.w['int'] = Function(self.W, name='U_int')
         self.w['td'] = Function(self.W, name='U_td')
+        # to store ic
+        self.w['ic'] = Function(self.W, name='U_ic')
 
         # create ic expression
         exp_str = ('self.w_ic_e = Expression(self.w_ic_e_cstr, self.W.ufl_element(), {})'
@@ -141,6 +144,7 @@ class Model():
         self.w[1].assign(self.w[0])
         self.w['int'].assign(self.w[0])
         self.w['td'].assign(self.w[0])
+        self.w['ic'].assign(self.w[0])
 
     def generate_form(self): 
 
@@ -238,6 +242,8 @@ class Model():
         # compute directional derivative about u in the direction of du (Jacobian)
         self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
 
+        self.bcq = [DirichletBC(self.W.sub(0), '0.0', self.l_bc, method="pointwise")]
+
     def solve(self, annotate = True):
         
         # initialise plotting
@@ -269,22 +275,22 @@ class Model():
 
                 # runge kutta (2nd order)
                 self.w['td'].assign(self.w[1])
-                solve(self.F_rk == 0, self.w['int'], J=self.J_rk)
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bcq)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                solve(self.F_rk == 0, self.w['int'], J=self.J_rk)
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bcq)
 
-                solve(self.F == 0, self.w[0], J=self.J)
+                solve(self.F == 0, self.w[0], J=self.J, bcs=self.bcq)
 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)
 
             else:
 
-                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters)
+                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters, bcs=self.bcq)
                 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)

@@ -75,6 +75,9 @@ def load_options(model, xml_path):
             model.phi_0 = Constant(1.0, name='phi_0')  
     else:
         model.plot = None
+        model.g = Constant(1.0, name='g_prime')
+        model.h_0 = Constant(1.0, name='h_0')
+        model.phi_0 = Constant(1.0, name='phi_0')  
     
     # spatial_discretisation
     if libspud.have_option('spatial_discretiation/discretisation::continuous'):

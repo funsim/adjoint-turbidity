@@ -144,7 +144,7 @@ class MyReducedFunctional(ReducedFunctional):
 
         # prepare target
         if self.prep_target_cb is not None:
-            self.prep_target_cb(self.model)
+            self.prep_target_cb(self.model, value)
 
         # calculate functional value for ec
         f = 0
@@ -157,15 +157,6 @@ class MyReducedFunctional(ReducedFunctional):
                     param.parameter.vector()[:] = np.array([param.value/assemble(param.term)])
                     print assemble(param.term), param.parameter.vector().array()
         j += assemble(f)
-
-        # print 'V=', value[0]((0)), 'R=', value[1]((0)), 'PHI_0=', value[2]((0))
-        print 'V=', value[0]((0)), 'R=', value[1]((0)), 'PHI_0=', value[2]((0))
-        y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(self.model.w[0], 
-                                                                      self.model.y, 
-                                                                      self.model.mesh) 
-
-        print 'dim phi_d max:', phi_d.max() * self.model.h_0.vector().array()[0] * self.model.phi_0.vector().array()[0]
-        print 'dim phi_d_aim max:', self.model.phi_d_aim.vector().array().max() * self.model.h_0.vector().array()[0] * self.model.phi_0.vector().array()[0]
 
         # dump functional
         if not repeat:
