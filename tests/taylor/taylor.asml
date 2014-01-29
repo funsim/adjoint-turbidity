@@ -6,11 +6,6 @@
   <mesh/>
   <time_options>
     <time_discretisation name="runge_kutta"/>
-    <adaptive_timestep>
-      <cfl_criteria>
-        <real_value rank="0">0.1</real_value>
-      </cfl_criteria>
-    </adaptive_timestep>
     <finish_time>
       <real_value rank="0">0.03</real_value>
     </finish_time>
@@ -19,9 +14,7 @@
     <ts_info/>
   </output_options>
   <spatial_discretisation>
-    <discretisation name="discontinuous">
-      <slope_limit/>
-    </discretisation>
+    <discretisation name="discontinuous"/>
   </spatial_discretisation>
   <non_dimensional_numbers/>
   <initial_conditions>

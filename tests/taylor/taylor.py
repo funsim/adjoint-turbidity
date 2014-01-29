@@ -16,12 +16,20 @@ model = Model('taylor.asml', no_init=True)
 info_blue('Taylor test for beta')
 
 info_green('Running forward model')
-# ic = project(Expression('0.5'), model.phi_FS)
-ic = Constant(5e-3)
+model.initialise()
+
+def set_ic(f):
+    v = TestFunction(model.R)
+    u = TrialFunction(model.R)
+    a = v*u*dx
+    L = v*f*dx
+    solve(a==L, model.beta)
+
+# ic = project(Expression('0.5'), model.V)
 # ic = Constant(0.1)
 # model.adapt_cfl = ic
-model.initialise()
-model.beta = project(Expression('0.005'), model.R, name='ic')
+ic = project(Expression('0.005'), model.R, name='ic')
+set_ic(ic)
 model.run()
 
 parameters["adjoint"]["stop_annotating"] = True 
@@ -31,18 +39,21 @@ J = Functional(inner(w_0, w_0)*dx*dt[FINISH_TIME])
 Jw = assemble(inner(w_0, w_0)*dx)
 
 info_green('Computing adjoint')
-dJdbeta = compute_gradient(J, InitialConditionParameter('ic'), forget=False)
+dJdbeta = compute_gradient(J, InitialConditionParameter(ic), forget=False)
+print dJdbeta
+print dJdbeta.vector().array()
 
 def Jhat(ic):
     info_green('Rerunning forward model')
-    model.beta = ic
     model.initialise()
+    set_ic(ic)
+
     model.run(annotate = False)
     w_0 = model.w[0]
     return assemble(inner(w_0, w_0)*dx)
 
-conv_rate = taylor_test(Jhat, InitialConditionParameter('ic'), Jw, dJdbeta, seed=1e-0)
-# conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdphi, value = ic)
+conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdbeta, value=ic, seed=1e-0)
+# conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdphi, value=ic)
 
 info_blue('Minimum convergence order with adjoint information = {}'.format(conv_rate))
 if conv_rate > 1.9:
