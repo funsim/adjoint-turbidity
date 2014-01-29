@@ -147,12 +147,19 @@ def one_shot(values):
 
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
 
-    model.phi_d_aim = Function(model.V)
     v = TestFunction(model.V)
     u = TrialFunction(model.V)
-    L = 0
+    depth_fn = 0
     for i, c in enumerate(ec_coeff):
-        L += v*c*pow(x_N*model.y*model.h_0, i)*dx
+        depth_fn += c*pow(x_N*model.y*model.h_0, i)
+
+    def smooth_abs_min(val, min = 0.25):
+        return (val**2.0 + min)**0.5
+    filt = 0
+    for loc in phi_d_y:
+        filt += exp(smooth_abs_min(x_N*model.y*model.h_0 - loc)**-2 - loc)-1
+
+    L = v*filt*depth_fn*dx
     a = v*u*dx
     solve(a==L, model.phi_d_aim)
 
