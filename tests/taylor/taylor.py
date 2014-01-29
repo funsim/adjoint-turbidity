@@ -9,7 +9,7 @@ from adjoint_sw_sediment import *
 import numpy as np
 import sys
 
-set_log_level(PROGRESS) 
+set_log_level(ERROR) 
 
 model = Model('taylor.asml', no_init=True)
 
@@ -17,11 +17,11 @@ info_blue('Taylor test for beta')
 
 info_green('Running forward model')
 # ic = project(Expression('0.5'), model.phi_FS)
-# ic = Constant(5e-3)
-# model.beta = ic
-ic = Constant(0.1)
-model.adapt_cfl = ic
+ic = Constant(5e-3)
+# ic = Constant(0.1)
+# model.adapt_cfl = ic
 model.initialise()
+model.beta = project(Expression('0.005'), model.R, name='ic')
 model.run()
 
 parameters["adjoint"]["stop_annotating"] = True 
@@ -31,7 +31,7 @@ J = Functional(inner(w_0, w_0)*dx*dt[FINISH_TIME])
 Jw = assemble(inner(w_0, w_0)*dx)
 
 info_green('Computing adjoint')
-dJdbeta = compute_gradient(J, ScalarParameter(ic), forget=False)
+dJdbeta = compute_gradient(J, InitialConditionParameter('ic'), forget=False)
 
 def Jhat(ic):
     info_green('Rerunning forward model')
@@ -41,7 +41,7 @@ def Jhat(ic):
     w_0 = model.w[0]
     return assemble(inner(w_0, w_0)*dx)
 
-conv_rate = taylor_test(Jhat, ScalarParameter(ic), Jw, dJdbeta, value = ic, seed=1e-0)
+conv_rate = taylor_test(Jhat, InitialConditionParameter('ic'), Jw, dJdbeta, seed=1e-0)
 # conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdphi, value = ic)
 
 info_blue('Minimum convergence order with adjoint information = {}'.format(conv_rate))
