@@ -42,12 +42,6 @@ def fit(n_coeff):
 
 ec_coeff = fit(10)
 
-# filter at measurement locations
-# def smooth_min(val, min = model.dX((0,0))/1e10):
-#     return (val**2.0 + min)**0.5
-#     filter = exp(smooth_min(x)**-2 - loc)-1
-# for phi_d_loc in zip(phi_d_x, phi_d_y):
-
 def gen_fns(model, V, R):
 
     # h_0 function
@@ -81,9 +75,17 @@ def prep_target_cb(model):
 
     v = TestFunction(model.V)
     u = TrialFunction(model.V)
-    L = 0
+    depth_fn = 0
     for i, c in enumerate(ec_coeff):
-        L += v*c*pow(x_N*model.y*model.h_0, i)*dx
+        depth_fn += c*pow(x_N*model.y*model.h_0, i)
+
+    def smooth_abs_min(val, min = 0.25):
+        return (val**2.0 + min)**0.5
+    filt = 0
+    for loc in phi_d_y:
+        filt += exp(smooth_abs_min(x_N*model.y*model.h_0 - loc)**-2 - loc)-1
+
+    L = v*filt*depth_fn*dx
     a = v*u*dx
     solve(a==L, model.phi_d_aim)
 
@@ -153,6 +155,8 @@ def one_shot(values):
         L += v*c*pow(x_N*model.y*model.h_0, i)*dx
     a = v*u*dx
     solve(a==L, model.phi_d_aim)
+
+    plot(model.phi_d_aim, interactive=True)
     
     phi_d_dim = phi_d*model.h_0*model.phi_0
     f = inner(phi_d-model.phi_d_aim, phi_d-model.phi_d_aim)*dx
@@ -245,11 +249,11 @@ def optimisation(f_values):
 if __name__=="__main__":
     args = eval(sys.argv[1])
     # try:
-    #     print one_shot(args)
+    print one_shot(args)
     # except:
     #     print (
     #     args, 
     #     [0, 0, 0], 
     #     [0, 0]
     #     )
-    optimisation(args)
+    # optimisation(args)
