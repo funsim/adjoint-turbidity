@@ -25,22 +25,22 @@ def similarity_h(model, y):
     return (4./9.)*K**2.0*model.t**(-2./3.)*H0
 
 def dam_break_u(model, x):
-    h_N = (1.0/(1.0+model.Fr((0,0))/2.0))**2.0
+    h_N = (1.0/(1.0+model.Fr.vector().array()[0]/2.0))**2.0
     if x <= -model.t:
         return 0.0
     elif x <= (2.0 - 3.0*h_N**0.5)*model.t:
         return 2./3.*(1.+x/model.t)
     else:
-        return model.Fr((0,0))/(1.0+model.Fr((0,0))/2.0)
+        return model.Fr.vector().array()[0]/(1.0+model.Fr.vector().array()[0]/2.0)
             
 def dam_break_h(model, x):
-    h_N = (1.0/(1.0+model.Fr((0,0))/2.0))**2.0
+    h_N = (1.0/(1.0+model.Fr.vector().array()[0]/2.0))**2.0
     if x <= -model.t:
         return 1.0
     elif x <= (2.0 - 3.0*h_N**0.5)*model.t:
         return 1./9.*(2.0-x/model.t)**2.0
     else:
-        return (1.0/(1.0+model.Fr((0,0))/2.0))**2.0
+        return (1.0/(1.0+model.Fr.vector().array()[0]/2.0))**2.0
             
 class Plotter():
 
@@ -54,6 +54,8 @@ class Plotter():
         self.h_0 = h_0
         self.phi_0 = phi_0
 
+        print g, h_0, phi_0
+
         if model.show_plot:
             plt.ion()
         
@@ -65,7 +67,7 @@ class Plotter():
         
         self.fig = plt.figure(figsize=(12, 12), dpi=200)
         self.fig.subplots_adjust(left = 0.15, wspace = 0.3, hspace = 0.3) 
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             self.q_plot = self.fig.add_subplot(221)
             self.h_plot = self.fig.add_subplot(222)
             self.phi_plot = self.fig.add_subplot(223)
@@ -87,13 +89,13 @@ class Plotter():
         
         self.q_plot.clear()
         self.h_plot.clear()
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             self.phi_plot.clear()
             self.phi_d_plot.clear()
 
         self.q_plot.set_ylabel(r'$u$')
         self.h_plot.set_ylabel(r'$h$')
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             self.phi_plot.set_xlabel(r'$x$')
             self.phi_plot.set_ylabel(r'$\varphi$')
             self.phi_d_plot.set_xlabel(r'$x$')
@@ -103,7 +105,7 @@ class Plotter():
 
         self.q_line, = self.q_plot.plot(y, q/h*(self.g*self.h_0)**0.5, 'r-')
         self.h_line, = self.h_plot.plot(y, h*self.h_0, 'r-')
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             self.phi_line, = self.phi_plot.plot(y, phi*self.phi_0, 'r-')
             self.phi_d_line, = self.phi_d_plot.plot(y, phi_d*self.phi_0*self.h_0, 'r-')
 
@@ -119,7 +121,7 @@ class Plotter():
             # self.phi_d_line_2, = self.phi_d_plot.plot(y, phi_d, 'k--')
 
         if self.dam_break:
-            dam_break_x = np.linspace(-1.0,(model.Fr((0,0))/(1.0+model.Fr((0,0))/2.0))*model.t,1001)
+            dam_break_x = np.linspace(-1.0,(model.Fr.vector().array()[0]/(1.0+model.Fr.vector().array()[0]/2.0))*model.t,1001)
             self.q_line_2, = self.q_plot.plot(dam_break_x + 1.0, 
                                               [dam_break_u(model, x) for x in dam_break_x], 
                                               'k--')
@@ -140,7 +142,7 @@ class Plotter():
         self.h_plot.set_autoscaley_on(False)
         self.h_plot.set_xlim([0.0,x_lim])
         self.h_plot.set_ylim([0.0,self.h_y_lim]) #h_int.min()*0.9,self.h_y_lim])
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             self.phi_plot.set_autoscaley_on(False)
             self.phi_plot.set_xlim([0.0,x_lim])
             self.phi_plot.set_ylim([0.0,self.phi_y_lim])
@@ -305,11 +307,11 @@ def timestep_info_string(model, tex=False):
     
     phi = split(model.w[0])[2]
     x_N_end = split(model.w[0])[4]
-    x_N_start = model.w_ic_e[4]
+    x_N_start = model.w['ic'][4]
     phi_int = assemble(phi*(x_N_end/x_N_start)*dx)
 
     if tex:
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
                     .format(x_N, u_N, h_N, phi_int))
@@ -318,7 +320,7 @@ def timestep_info_string(model, tex=False):
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
                     .format(x_N, u_N, h_N, phi_int))
     else:
-        if model.beta((0,0)):
+        if model.beta.vector().array()[0]:
             return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
                 "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.2e}"
                 .format(x_N, u_N, h_N, phi_int))

@@ -85,8 +85,6 @@ def prep_target_cb(model, value=None):
     if value is not None:
         print 'V=', value[0]((0)), '(0.05) R=', value[1]((0)), '(0.05) PHI_0=', value[2]((0)), '(0.1)'
 
-    y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-
     print 'final dim x_N', x_N*model.h_0.vector().array()[0]
     print 'final dim x_N_aim', model.x_N_aim.vector().array()[0]
     print 'dim phi_d max:', phi_d.max() * model.h_0.vector().array()[0] * model.phi_0.vector().array()[0]

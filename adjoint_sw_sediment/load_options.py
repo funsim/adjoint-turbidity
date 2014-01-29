@@ -3,7 +3,7 @@ from dolfin import *
 from dolfin_adjoint import *
 import time_discretisation
 
-def load_options(model, xml_path):
+def pre_init(model, xml_path):
 
     # load options file
     libspud.load_options(xml_path)
@@ -43,15 +43,42 @@ def load_options(model, xml_path):
         model.tol = libspud.get_option('time_options/steady_state_tolerance')
         model.finish_time = None
     else:
-        raise Exception('unrecognised finishing criteria')
+        raise Exception('unrecognised finishing criteria') 
     
-    # output options
+    # spatial_discretisation
+    if libspud.have_option('spatial_discretiation/discretisation::continuous'):
+        model.disc = 'CG'
+    elif libspud.have_option('spatial_discretisation/discretisation::discontinuous'):
+        model.disc = 'DG'
+        model.slope_limit = libspud.have_option('spatial_discretisation/discretisation/slope_limit')
+    else:
+        raise Exception('unrecognised spatial discretisation in options file')
+    model.degree = get_optional('spatial_discretisation/polynomial_degree', default = 1)    
+
+    # tests
+    if libspud.have_option('testing/test::mms'):
+        option_path = 'testing/test::mms/source_terms/'
+        model.mms = True
+        model.S_e = (
+            read_ic(option_path + 'momentum_source', default = None), 
+            read_ic(option_path + 'height_source', default = None), 
+            read_ic(option_path + 'volume_fraction_source', default = None), 
+            read_ic(option_path + 'deposit_depth_source', default = None)
+            )
+    else:
+        model.mms = False
+
+def post_init(model, xml_path):
+    
+    # ts info options
     if libspud.have_option('output_options/ts_info'):
         model.ts_info = True
     else:
         model.ts_info = False
+
+    # plotting options
+    option_path = 'output_options/plotting/'
     if libspud.have_option('output_options/plotting'):
-        option_path = 'output_options/plotting/'
         model.plot = libspud.get_option(option_path + 'plotting_interval')
         if libspud.have_option(option_path + 'output::both'):
             model.show_plot = True
@@ -64,47 +91,22 @@ def load_options(model, xml_path):
             model.save_plot = True
         else:
             raise Exception('unrecognised plotting output in options file')
-        option_path = option_path + 'dimensionalise_plots/'
-        if libspud.have_option(option_path):
-            model.g = Constant(libspud.get_option(option_path + 'g_prime'), name='g_prime')
-            model.h_0 = Constant(libspud.get_option(option_path + 'h_0'), name='h_0')
-            model.phi_0 = Constant(libspud.get_option(option_path + 'phi_0'), name='phi_0')
-        else:
-            model.g = Constant(1.0, name='g_prime')
-            model.h_0 = Constant(1.0, name='h_0')
-            model.phi_0 = Constant(1.0, name='phi_0')  
+        option_path = option_path + 'dimensionalise_plots/' 
     else:
         model.plot = None
-        model.g = Constant(1.0, name='g_prime')
-        model.h_0 = Constant(1.0, name='h_0')
-        model.phi_0 = Constant(1.0, name='phi_0')  
-    
-    # spatial_discretisation
-    if libspud.have_option('spatial_discretiation/discretisation::continuous'):
-        model.disc = 'CG'
-    elif libspud.have_option('spatial_discretisation/discretisation::discontinuous'):
-        model.disc = 'DG'
-        model.slope_limit = libspud.have_option('spatial_discretisation/discretisation/slope_limit')
-    else:
-        raise Exception('unrecognised spatial discretisation in options file')
-    model.degree = get_optional('spatial_discretisation/polynomial_degree', default = 1)
+
+    # dimenionalisation
+    model.g = project(Constant(get_optional(option_path + 'g_prime', default = 1.0)), model.R, name='g_prime')
+    model.h_0 = project(Constant(get_optional(option_path + 'h_0', default = 1.0)), model.R, name='h_0')
+    model.phi_0 = project(Constant(get_optional(option_path + 'phi_0', default = 1.0)), model.R, name='phi_0') 
 
     # non dimensional numbers
     option_path = 'non_dimensional_numbers/'
-    model.Fr = Constant(get_optional(option_path + 'Fr', default = 1.19), name="Fr")
-    model.beta = Constant(get_optional(option_path + 'beta', default = 5e-3), name="beta")
+    model.Fr = project(Constant(get_optional(option_path + 'Fr', default = 1.19)), model.R, name="Fr")
+    model.beta = project(Constant(get_optional(option_path + 'beta', default = 5e-3)), model.R, name="beta")
 
     # initial conditions
     option_path = 'initial_conditions/'
-    model.w_ic_e_cstr = [
-        read_ic(option_path + 'momentum', default = '0.0'), 
-        read_ic(option_path + 'height', default = '1.0'),
-        read_ic(option_path + 'volume_fraction', default = '1.0'),
-        read_ic(option_path + 'deposit_depth', default = '0.0'),
-        read_ic(option_path + 'initial_length', default = '1.0'),
-        read_ic(option_path + 'front_velocity', default = '1.19'),
-        read_ic(option_path + 'timestep', default = '1.0'),
-        ]
     model.w_ic_var = ''
     if (libspud.have_option(option_path + 'variables') and 
         libspud.option_count(option_path + 'variables/var') > 0):
@@ -114,6 +116,17 @@ def load_options(model, xml_path):
             var = name.split(':')[-1]
             code = libspud.get_option('initial_conditions/variables/'+name+'/code')
             model.w_ic_var = model.w_ic_var + var + ' = ' + code + ', '
+    ic_exp = (read_ic(option_path + 'momentum', default = '0.0'),
+              read_ic(option_path + 'height', default = '1.0'),
+              read_ic(option_path + 'volume_fraction', default = '1.0'),
+              read_ic(option_path + 'deposit_depth', default = '0.0'),
+              read_ic(option_path + 'initial_length', default = '1.0'),
+              read_ic(option_path + 'front_velocity', default = '1.19'),
+              read_ic(option_path + 'timestep', default = '1.0')
+              )
+    exp_str = ('model.w_ic_e = Expression(ic_exp, model.W.ufl_element(), %s)'%model.w_ic_var)
+    exec exp_str in globals(), locals()
+
     model.override_ic = (
         {'id':'momentum', 
          'override':libspud.have_option(option_path + 'momentum/override'), 
@@ -136,23 +149,7 @@ def load_options(model, xml_path):
         {'id':'timestep',
          'override':libspud.have_option(option_path + 'timestep/override'),
          'FS':'R'}
-        )
-
-    # boundary conditions
-    
-
-    # tests
-    if libspud.have_option('testing/test::mms'):
-        option_path = 'testing/test::mms/source_terms/'
-        model.mms = True
-        model.S_e = (
-            read_ic(option_path + 'momentum_source', default = None), 
-            read_ic(option_path + 'height_source', default = None), 
-            read_ic(option_path + 'volume_fraction_source', default = None), 
-            read_ic(option_path + 'deposit_depth_source', default = None)
-            )
-    else:
-        model.mms = False
+        )      
 
 def get_optional(path, default):
     if libspud.have_option(path):

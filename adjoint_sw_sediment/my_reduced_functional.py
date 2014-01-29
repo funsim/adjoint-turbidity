@@ -17,7 +17,7 @@ def generate_functional(components):
 class MyReducedFunctional(ReducedFunctional):
 
     def __init__(self, model, functional, scaled_parameters, parameter, scale = 1.0, eval_cb = None, 
-                 derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, 
+                 derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, prep_model_cb=None, 
                  ignore = [], cache = None, adj_plotter = None, dump_ic = False, dump_ec = False):
 
         # functional setup
@@ -25,7 +25,8 @@ class MyReducedFunctional(ReducedFunctional):
         self.scaled_parameters = scaled_parameters
         self.first_run = True
 
-        # prep_target_cb
+        # prep_*_cb
+        self.prep_model_cb = prep_model_cb
         self.prep_target_cb = prep_target_cb
 
         # call super.init()
@@ -87,6 +88,10 @@ class MyReducedFunctional(ReducedFunctional):
         for i in range(len(value)):
             replace_ic_value(self.parameter[i], value[i])
 
+        # prepare model
+        if self.prep_model_cb is not None:
+            self.prep_model_cb(self.model, value)
+
         # create ic_dict for model
         ic_dict = {}       
         for override in self.model.override_ic:
@@ -144,7 +149,7 @@ class MyReducedFunctional(ReducedFunctional):
 
         # prepare target
         if self.prep_target_cb is not None:
-            self.prep_target_cb(self.model, value)
+            self.prep_target_cb(self.model)
 
         # calculate functional value for ec
         f = 0
@@ -155,7 +160,7 @@ class MyReducedFunctional(ReducedFunctional):
             for param in self.scaled_parameters:
                 if param.time == timeforms.FINISH_TIME:
                     param.parameter.vector()[:] = np.array([param.value/assemble(param.term)])
-                    print assemble(param.term), param.parameter.vector().array()
+                    # print assemble(param.term), param.parameter.vector().array()
         j += assemble(f)
 
         # dump functional

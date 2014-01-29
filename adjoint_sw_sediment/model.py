@@ -14,7 +14,7 @@ import input_output as io
 from slope_limiting import slope_limit
 from equation import Equation
 import time_discretisation
-from load_options import load_options
+import load_options
 
 ############################################################
 # DOLFIN SETTINGS
@@ -37,7 +37,10 @@ class Model():
 
     def __init__(self, xml_path, error_callback=None, 
                  end_criteria = None, no_init=False):
-        load_options(self, xml_path)
+
+        # load options required to define function spaces e.t.c.
+        self.xml_path = xml_path
+        load_options.pre_init(self, self.xml_path)
 
         ### options that aren't handled in the diamond options file ###
         # output data
@@ -60,8 +63,14 @@ class Model():
             self.end_criteria = end_criteria
 
     def initialise(self):
+
         # initialise function spaces
         self.initialise_function_spaces()
+
+        # load options that require function spaces (ic, variables e.t.c.)
+        load_options.post_init(self, self.xml_path)
+
+        # generate form
         self.generate_form()
 
     def run(self, ic_dict = None, annotate = True):
@@ -109,11 +118,6 @@ class Model():
         self.w['td'] = Function(self.W, name='U_td')
         # to store ic
         self.w['ic'] = Function(self.W, name='U_ic')
-
-        # create ic expression
-        exp_str = ('self.w_ic_e = Expression(self.w_ic_e_cstr, self.W.ufl_element(), {})'
-                   .format(self.w_ic_var))
-        exec exp_str in globals(), locals()
 
     def set_ic(self, ic_dict = None):
 
@@ -248,10 +252,11 @@ class Model():
         
         # initialise plotting
         if self.plot:
+            print self.g, self.h_0, self.phi_0
             self.plotter = io.Plotter(self, rescale=True, file=self.project_name, 
                                       similarity = self.similarity, dam_break = self.dam_break, 
-                                      g = self.g((0,0)), h_0 = self.h_0((0,0)), 
-                                      phi_0 = self.phi_0((0,0)))
+                                      g = self.g.vector().array()[0], h_0 = self.h_0.vector().array()[0],
+                                      phi_0 = self.phi_0.vector().array()[0])
             self.plot_t = self.t + self.plot
 
         # write ic's
