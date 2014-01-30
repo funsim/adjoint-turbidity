@@ -90,7 +90,7 @@ class Model():
         # left boundary marked as 0, right as 1
         class LeftBoundary(SubDomain):
             def inside(self, x, on_boundary):
-                return x[0] < 0.5 + DOLFIN_EPS and on_boundary
+                return x[0] < DOLFIN_EPS
         left_boundary = LeftBoundary()
         self.l_bc = left_boundary
         exterior_facet_domains = FacetFunction("uint", self.mesh)

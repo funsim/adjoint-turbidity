@@ -85,9 +85,6 @@ class Equation():
             if model.mms:
                 self.F -= k_td*v*u['td']*model.n*(model.ds(0) + model.ds(1))
                 self.F += k_td*v*model.w_ic_e[index]*model.n*(model.ds(0) + model.ds(1)) 
-            # bc term for zero momentum at left boundary
-            if index == 0 and not model.mms:
-                self.F -= k_td*v*u['td']*model.n*model.ds(0)
 
             # grad term
             if grad_term:
