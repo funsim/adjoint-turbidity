@@ -79,12 +79,11 @@ def prep_target_cb(model):
     for i, c in enumerate(ec_coeff):
         depth_fn += c*pow(x_N*model.y*model.h_0, i)
 
-    def smooth_abs_min(val, min = 0.25):
+    def smooth_abs(val, min = 0.25):
         return (val**2.0 + min)**0.5
-    filt = 0
-    for loc in phi_d_y:
-        filt += exp(smooth_abs_min(x_N*model.y*model.h_0 - loc)**-2 - loc)-1
-
+    def smooth_pos(val):
+        return (val + smooth_abs(val))/2.0
+    filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 1000)))
     L = v*filt*depth_fn*dx
     a = v*u*dx
     solve(a==L, model.phi_d_aim)
@@ -145,34 +144,44 @@ def one_shot(values):
     model.set_ic(ic_dict = ic_dict)
     model.solve()
 
+    model.sol_fs = model.V #FunctionSpace(model.mesh, 'DG', 3)
+    model.phi_d_aim = Function(model.sol_fs)
+    prep_target_cb(model)
+
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
-
-    v = TestFunction(model.V)
-    u = TrialFunction(model.V)
-    depth_fn = 0
-    for i, c in enumerate(ec_coeff):
-        depth_fn += c*pow(x_N*model.y*model.h_0, i)
-
-    def smooth_abs_min(val, min = 0.25):
-        return (val**2.0 + min)**0.5
-    filt = 0
-    for loc in phi_d_y:
-        filt += exp(smooth_abs_min(x_N*model.y*model.h_0 - loc)**-2 - loc)-1
-
-    L = v*filt*depth_fn*dx
-    a = v*u*dx
-    solve(a==L, model.phi_d_aim)
-
-    plot(model.phi_d_aim, interactive=True)
     
     phi_d_dim = phi_d*model.h_0*model.phi_0
-    f = inner(phi_d-model.phi_d_aim, phi_d-model.phi_d_aim)*dx
 
-    val = assemble(f)
+    def smooth_abs(val, min = 0.25):
+        return (val**2.0 + min)**0.5
+    def smooth_pos(val):
+        return (val + smooth_abs(val))/2.0
+    def smooth_min(val, min = 1.0):
+        return 
 
+    # f = 0
+    # for loc in phi_d_x:
+    #     filt = (exp(smooth_abs(x_N*model.y*model.h_0 - loc)**-1.0))
+    #     filt_diff = filt*(phi_d-model.phi_d_aim)
+    #     f += inner(filt_diff, filt_diff)
+    
+    filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 100)))
+    diff = filt*(phi_d-model.phi_d_aim)
+    f = inner(diff, diff)*smooth_min(x_N/(phi_d_x[-1]+100), min=1.0)
+    val = assemble(f*dx)
+    
     int_phi_d_aim = assemble(model.phi_d_aim*dx)
     int_phi_d_dim = assemble(phi_d*model.h_0*model.phi_0*dx)
     int_diff = assemble((model.phi_d_aim-phi_d*model.h_0*model.phi_0)*dx)   
+
+    v = TestFunction(model.V)
+    u = TrialFunction(model.V)
+    L = v*f*dx
+    a = v*u*dx
+    solve(a==L, model.phi_d_aim)
+
+    print model.phi_d_aim.vector().array()
+    plot(model.phi_d_aim, interactive=True)
 
     y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
 
