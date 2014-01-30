@@ -3,22 +3,23 @@ from dolfin_adjoint import *
 from adjoint_sw_sediment import *
 import memoize
 import numpy as np
+import pickle
 
-def generate_functional(components):
-    f = 0
-    for component in components:
-        if component[1]:
-            scaling = Constant(component[1]/assemble(component[0]))
-        else:
-            scaling = Constant(1.0)
-        f += scaling*component[0]
-    return f
+def to_tuple(obj):
+    if hasattr(obj, 'vector'):
+        return to_tuple(obj.vector().array)
+    if hasattr(obj, '__iter__'):
+        return tuple([to_tuple(o) for o in obj])
+    else:
+        return obj
 
 class MyReducedFunctional(ReducedFunctional):
 
+    results = {'id':0}
+
     def __init__(self, model, functional, scaled_parameters, parameter, scale = 1.0, eval_cb = None, 
-                 derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, prep_model_cb=None, 
-                 ignore = [], cache = None, adj_plotter = None, dump_ic = False, dump_ec = False):
+                 derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, 
+                 prep_model_cb=None, ignore = [], cache = None, adj_plotter = None):
 
         # functional setup
         self.functional = functional
@@ -37,42 +38,17 @@ class MyReducedFunctional(ReducedFunctional):
 
         # set model
         self.model = model
-
-        # clear output files
-        self.dump_ic = dump_ic
-        if self.dump_ic:
-            for override in self.model.override_ic:
-                if override['override']:
-                    input_output.clear_file('ic_adj_{}.json'.format(override['id']))
-        self.dump_ec = dump_ec
-        if self.dump_ec:
-            input_output.clear_file('ec_adj.json')
-        input_output.clear_file('j_log.json')
-                                            
-        # initialise j_log
-        self.j_log = []
-
+                                          
         # plotting
         self.adj_plotter = adj_plotter
-
-        # record iteration
-        self.iter = 0
-        self.last_iter = -1
-
-        # print 'init watcher'
-        # watcher(c=self.scaled_parameters[0].parameter, log_file='log.txt')
 
     def compute_functional(self, value, annotate):
         '''run forward model and compute functional'''
 
-        # algorithm often does two forward runs for every adjoint run
-        # we only want to store results from the first forward run
-        if self.last_iter == self.iter:
-            repeat = True
-        else:
-            repeat = False
-        self.last_iter = self.iter
-
+        # store ic
+        self.results['id'] += 1
+        self.results['ic'] = to_tuple(value)
+        
         info_blue('Start evaluation of j')
         timer = dolfin.Timer("j evaluation") 
 
@@ -108,16 +84,7 @@ class MyReducedFunctional(ReducedFunctional):
                 ic_dict[override['id']] = Function(fs, name='ic_' + override['id'])
                 solve(a==L, ic_dict[override['id']])
 
-                # dump ic
-                if self.dump_ic and not repeat:
-                    dumpable_ic = ic_dict[override['id']].vector().array()
-                    input_output.write_array_to_file('ic_adj_latest_{}.json'.format(override['id']),
-                                                     [dumpable_ic],'w')
-                    input_output.write_array_to_file('ic_adj_{}.json'.format(override['id']),
-                                                     [dumpable_ic],'a')
-
         # set model ic
-        self.last_ic = ic_dict
         self.model.set_ic(ic_dict = ic_dict)
 
         # calculate functional value for ic
@@ -139,14 +106,6 @@ class MyReducedFunctional(ReducedFunctional):
         timer.stop()
         info_blue('Runtime: ' + str(timer.value())  + " s")
 
-        # dump results
-        if self.dump_ec and not repeat:
-            y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(self.model.w[0], 
-                                                                          self.model.y, 
-                                                                          self.model.mesh) 
-            input_output.write_array_to_file('ec_adj_latest.json',[phi_d, x_N],'w')
-            input_output.write_array_to_file('ec_adj.json',[phi_d, x_N],'a')
-
         # prepare target
         if self.prep_target_cb is not None:
             self.prep_target_cb(self.model)
@@ -163,11 +122,7 @@ class MyReducedFunctional(ReducedFunctional):
                     # print assemble(param.term), param.parameter.vector().array()
         j += assemble(f)
 
-        # dump functional
-        if not repeat:
-            self.j_log.append(j)
-            input_output.write_array_to_file('j_log.json', self.j_log, 'w')
-        info_green('j = ' + str(j))
+        self.results['j'] = j
 
         self.first_run = False
         return j * self.scale
@@ -187,16 +142,19 @@ class MyReducedFunctional(ReducedFunctional):
         info_green('Start evaluation of dj')
         timer = dolfin.Timer("dj evaluation") 
 
-        self.scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
-        value = self.scaled_dfunc_value
+        scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
+        value = scaled_dfunc_value
         print 'dV=', value[0]((0)), 'dR=', value[1]((0)), 'dPHI_0=', value[2]((0))
         # print 'dV=', value[0]((0)), 'dR=', value[1]((0)), 'dPHI_0=', value[2]((0))
 
-        # plot
-        if self.adj_plotter:
-            self.adj_plotter.update_plot(self.model, self.last_ic, self.j_log, self.scaled_dfunc_value[0])   
-        self.iter += 1
-        
+        # save gradient
+        self.results['gradient'] = to_tuple(scaled_dfunc_value)
+
+        # save results dict
+        f = open('opt_%d'%self.results['id'],'w')
+        pickle.dump(f, self.results)
+        f.close()
+
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
         

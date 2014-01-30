@@ -12,6 +12,13 @@ import sys
 
 set_log_level(ERROR)
 
+def smooth_abs(val, min = 0.25):
+    return (val**2.0 + min)**0.5
+def smooth_pos(val):
+    return (val + smooth_abs(val))/2.0
+def smooth_min(val, min = 1.0):
+    return smooth_pos(val - min) + min
+
 def end_criteria(model):        
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
     x_N_start = split(model.w['ic'])[4]
@@ -79,10 +86,6 @@ def prep_target_cb(model):
     for i, c in enumerate(ec_coeff):
         depth_fn += c*pow(x_N*model.y*model.h_0, i)
 
-    def smooth_abs(val, min = 0.25):
-        return (val**2.0 + min)**0.5
-    def smooth_pos(val):
-        return (val + smooth_abs(val))/2.0
     filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 1000)))
     L = v*filt*depth_fn*dx
     a = v*u*dx
@@ -93,14 +96,6 @@ def prep_target_cb(model):
     print 'final dim x_N', x_N_val*model.h_0.vector().array()[0]
     print 'dim phi_d max:', phi_d_vector.max()*model.h_0.vector().array()[0]*model.phi_0.vector().array()[0] * model.norms[2]((0,0))
     print 'dim phi_d_aim max:', model.phi_d_aim.vector().array().max()
-
-    int_phi_d_aim = assemble(model.phi_d_aim*dx)
-    int_phi_d_dim = assemble(phi_d*model.h_0*model.phi_0*model.norms[2]*dx)
-    int_diff = assemble((model.phi_d_aim-phi_d*model.h_0*model.phi_0*model.norms[2])*dx) 
-
-    print 'int_phi_d_dim', int_phi_d_dim
-    print 'int_phi_d_aim', int_phi_d_aim
-    print 'int(phi_d_aim-phi_d_dim)', int_diff
 
 # multiprocessing
 def one_shot(values):
@@ -151,13 +146,6 @@ def one_shot(values):
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
     
     phi_d_dim = phi_d*model.h_0*model.phi_0
-
-    def smooth_abs(val, min = 0.25):
-        return (val**2.0 + min)**0.5
-    def smooth_pos(val):
-        return (val + smooth_abs(val))/2.0
-    def smooth_min(val, min = 1.0):
-        return 
 
     # f = 0
     # for loc in phi_d_x:
@@ -227,7 +215,10 @@ def optimisation(f_values):
 
     # form functional integrals
     phi_d_dim = phi_d*model.h_0*model.phi_0*model.norms[2]
-    int_0 = inner(phi_d_dim-model.phi_d_aim, phi_d_dim-model.phi_d_aim)*dx
+
+    filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 100)))
+    diff = filt*(phi_d-model.phi_d_aim)
+    int_0 = inner(diff, diff)*smooth_min(x_N/(phi_d_x[-1]+100), min=1.0)*dx
 
     # functional
     int_0_scale = Function(model.R)
@@ -253,7 +244,6 @@ def optimisation(f_values):
            override['function'] = R*model.norms[1]*model.dX/model.Fr*model.adapt_cfl
 
     reduced_functional = MyReducedFunctional(model, functional, scaled_parameters, parameters, 
-                                             dump_ic=True, dump_ec=True, 
                                              scale = 1e-3, prep_model_cb=prep_model_cb, 
                                              prep_target_cb=prep_target_cb)
 
@@ -265,11 +255,11 @@ def optimisation(f_values):
 if __name__=="__main__":
     args = eval(sys.argv[1])
     # try:
-    print one_shot(args)
+    # print one_shot(args)
     # except:
     #     print (
     #     args, 
     #     [0, 0, 0], 
     #     [0, 0]
     #     )
-    # optimisation(args)
+    optimisation(args)
