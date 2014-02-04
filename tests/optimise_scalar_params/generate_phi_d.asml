@@ -62,17 +62,17 @@
     <variables>
       <var name="Fr">
         <code>
-          <string_value lines="20" type="code" language="python">self.Fr((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.Fr.vector().array()[0]</string_value>
         </code>
       </var>
       <var name="dX">
         <code>
-          <string_value lines="20" type="code" language="python">self.dX((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.dX((0,0))</string_value>
         </code>
       </var>
       <var name="cfl">
         <code>
-          <string_value lines="20" type="code" language="python">self.adapt_cfl((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.adapt_cfl.vector().array()[0]</string_value>
         </code>
       </var>
     </variables>

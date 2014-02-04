@@ -27,15 +27,6 @@ def pre_init(model, xml_path):
     else:
         raise Exception('unrecognised time discretisation in options file')
 
-    model.start_time = get_optional('time_options/start_time', default = 0.0)
-    if libspud.have_option('time_options/adaptive_timestep'):
-        option_path = 'time_options/adaptive_timestep/'
-        model.adapt_timestep = True
-        model.adapt_cfl = Constant(libspud.get_option(option_path + 'cfl_criteria'))
-    else:
-        model.adapt_timestep = False
-        model.adapt_cfl = Constant(0.2)
-
     if libspud.have_option('time_options/finish_time'):
         model.finish_time = libspud.get_option('time_options/finish_time')
         model.tol = None
@@ -69,6 +60,15 @@ def pre_init(model, xml_path):
         model.mms = False
 
 def post_init(model, xml_path):
+
+    model.start_time = get_optional('time_options/start_time', default = 0.0)
+    if libspud.have_option('time_options/adaptive_timestep'):
+        option_path = 'time_options/adaptive_timestep/'
+        model.adapt_timestep = True
+        model.adapt_cfl = project(Constant(libspud.get_option(option_path + 'cfl_criteria')), model.R, name='cfl')
+    else:
+        model.adapt_timestep = False
+        model.adapt_cfl = project(Constant(0.2), model.R, name='cfl')
     
     # ts info options
     if libspud.have_option('output_options/ts_info'):

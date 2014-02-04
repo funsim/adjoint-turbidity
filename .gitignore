@@ -3,5 +3,6 @@
 *.json
 *.dat
 *.png
+*.pckl
 results
 ffc_form*

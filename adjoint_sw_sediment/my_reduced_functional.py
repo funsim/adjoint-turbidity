@@ -7,7 +7,7 @@ import pickle
 
 def to_tuple(obj):
     if hasattr(obj, 'vector'):
-        return to_tuple(obj.vector().array)
+        return to_tuple(obj.vector().array())
     if hasattr(obj, '__iter__'):
         return tuple([to_tuple(o) for o in obj])
     else:
@@ -22,7 +22,6 @@ class MyReducedFunctional(ReducedFunctional):
                  prep_model_cb=None, ignore = [], cache = None, adj_plotter = None):
 
         # functional setup
-        self.functional = functional
         self.scaled_parameters = scaled_parameters
         self.first_run = True
 
@@ -30,17 +29,14 @@ class MyReducedFunctional(ReducedFunctional):
         self.prep_model_cb = prep_model_cb
         self.prep_target_cb = prep_target_cb
 
+        # set model
+        self.model = model
+
         # call super.init()
         super(MyReducedFunctional, self).__init__(functional, parameter, scale = scale, 
                                                   eval_cb = eval_cb, derivative_cb = derivative_cb, 
                                                   replay_cb = replay_cb, hessian_cb = hessian_cb, 
                                                   ignore = ignore, cache = cache)
-
-        # set model
-        self.model = model
-                                          
-        # plotting
-        self.adj_plotter = adj_plotter
 
     def compute_functional(self, value, annotate):
         '''run forward model and compute functional'''
@@ -123,6 +119,7 @@ class MyReducedFunctional(ReducedFunctional):
         j += assemble(f)
 
         self.results['j'] = j
+        info_green('Functional value: %f'%j)
 
         self.first_run = False
         return j * self.scale
@@ -143,22 +140,22 @@ class MyReducedFunctional(ReducedFunctional):
         timer = dolfin.Timer("dj evaluation") 
 
         scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
-        value = scaled_dfunc_value
-        print 'dV=', value[0]((0)), 'dR=', value[1]((0)), 'dPHI_0=', value[2]((0))
-        # print 'dV=', value[0]((0)), 'dR=', value[1]((0)), 'dPHI_0=', value[2]((0))
-
-        # save gradient
-        self.results['gradient'] = to_tuple(scaled_dfunc_value)
-
-        # save results dict
-        f = open('opt_%d'%self.results['id'],'w')
-        pickle.dump(f, self.results)
-        f.close()
 
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
+
+        value = scaled_dfunc_value
+
+        print 'd0=', value[0]((0)), 'd1=', value[1]((0)), 'd2=', value[2]((0))
+        # save gradient
+        self.results['gradient'] = to_tuple(value)
+
+        # save results dict
+        f = open('opt_%d.pckl'%self.results['id'],'w')
+        pickle.dump(self.results, f)
+        f.close()
         
-        return self.scaled_dfunc_value
+        return value
 
 def replace_ic_value(parameter, new_value):
     ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''

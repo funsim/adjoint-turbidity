@@ -85,9 +85,11 @@ def prep_target_cb(model, value=None):
     if value is not None:
         print 'V=', value[0]((0)), '(0.05) R=', value[1]((0)), '(0.05) PHI_0=', value[2]((0)), '(0.1)'
 
-    print 'final dim x_N', x_N*model.h_0.vector().array()[0]
+    phi_d_vector, x_N_val = input_output.map_to_arrays(model.w[0], model.y, model.mesh)[4:6]
+
+    print 'final dim x_N', x_N_val*model.h_0.vector().array()[0]
     print 'final dim x_N_aim', model.x_N_aim.vector().array()[0]
-    print 'dim phi_d max:', phi_d.max() * model.h_0.vector().array()[0] * model.phi_0.vector().array()[0]
+    print 'dim phi_d max:', phi_d_vector.max() * model.h_0.vector().array()[0] * model.phi_0.vector().array()[0]
     print 'dim phi_d_aim max:', model.phi_d_aim.vector().array().max()
 
     (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
@@ -115,7 +117,7 @@ adj_plotter_options['show'] = True
 
 # for i in range(10):
 reduced_functional = MyReducedFunctional(model, functional, scaled_parameters, parameters, 
-                                         dump_ic=True, dump_ec=True, adj_plotter=None,
+                                         adj_plotter=None,
                                          scale = 1e-3, prep_target_cb=prep_target_cb)
 
 # minimimizer_kwargs = {'method': "L-BFGS-B", 
