@@ -50,80 +50,49 @@ def fit(n_coeff):
     coeff_C.append(Constant(c))
   return coeff_C
 
-ec_coeff = fit(10)
+ec_coeff = fit(3)
 
-# from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 
-# l = 170000
+l = 170000
 
-# mesh = IntervalMesh(20, 0.0, 1.0)
-# fs = FunctionSpace(mesh, 'CG', 1)
-# y = project(Expression('x[0]'), fs)
-# depth_fn = 0
-# for i, c in enumerate(ec_coeff):
-#   depth_fn += c*pow(l*y, i)
-# d = Function(fs)
-# v = TestFunction(fs)
-# solve(v*depth_fn*dx - v*d*dx == 0, d)
+mesh = IntervalMesh(20, 0.0, 1.0)
+fs = FunctionSpace(mesh, 'CG', 1)
+y = project(Expression('x[0]'), fs)
+depth_fn = 0
+for i, c in enumerate(ec_coeff):
+  depth_fn += c*pow(l*y, i)
+d = Function(fs)
+v = TestFunction(fs)
+solve(v*depth_fn*dx - v*d*dx == 0, d)
 
-# x = np.linspace(0,l,21)
-# d_2 = np.zeros(x.shape)
-# for i, x_ in enumerate(x):
-#   for pow, c in enumerate(ec_coeff):
-#     d_2[i] += c*x_**pow
+x = np.linspace(0,l,21)
+d_2 = np.zeros(x.shape)
+for i, x_ in enumerate(x):
+  for pow, c in enumerate(ec_coeff):
+    d_2[i] += c*x_**pow
 
-# filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
-# f = Function(fs)
-# solve(v*filt*dx - v*f*dx == 0, f)
+filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
+f = Function(fs)
+solve(v*filt*dx - v*f*dx == 0, f)
 
-# fd = Function(fs)
-# solve(v*filt*depth_fn*dx - v*fd*dx == 0, fd)
+fd = Function(fs)
+solve(v*filt*depth_fn*dx - v*fd*dx == 0, fd)
 
-# # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-# #          input_output.map_function_to_array(d, mesh))
 # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-#          input_output.map_function_to_array(fd, mesh))
-# # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-# #          input_output.map_function_to_array(f, mesh))
+#          input_output.map_function_to_array(d, mesh))
+plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+         input_output.map_function_to_array(fd, mesh))
+# plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+#          input_output.map_function_to_array(f, mesh))
 
-# # plt.plot(x, d_2)
-# # plt.ylim(0,1.2)
+# plt.plot(x, d_2)
+# plt.ylim(0,1.2)
 
-# plt.show()
-
-# from IPython import embed; embed()
-
-  # filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 100)))
-  # f = Function(model.V)
-  # v = TestFunction(model.V)
-  # solve(v*filt*dx - v*f*dx == 0, f)
-
-
-def gen_fns(model, V, R):
-
-  # h_0 function
-  v = TestFunction(model.R)
-  u = TrialFunction(model.R)
-  model.opt_h_L = v*(V*model.norms[0]/(R*model.norms[1]*model.phi_0*model.norms[2]))**0.5*dx
-  model.opt_h_a = v*u*dx
-
-  # sensible beta function
-  D = 2.5e-4
-  model.g = project(Constant(15.8922), model.R, name="g_prime")
-  g = model.g.vector().array()[0]
-  beta_dim = Constant((g*D**2)/(18*1e-6))    # Ferguson2004
-  model.opt_beta_L = v*beta_dim*dx
-  h = (V*model.norms[0]/(R*model.norms[1]*model.phi_0*model.norms[2]))**0.5
-  model.opt_beta_a = v*u*(model.g*h)**0.5*dx
+plt.show()
+sys.exit()
 
 def prep_model_cb(model, value = None):
-
-  # calculate h_0 and beta
-  solve(model.opt_h_a==model.opt_h_L, model.h_0)
-  solve(model.opt_beta_a==model.opt_beta_L, model.beta)
-  
-  print 'h_0', model.h_0.vector().array()
-  print 'beta', model.beta.vector().array()
   
   if value is not None:
     print '0=', value[0]((0)), ' 1=', value[1]((0)), ' 2=', value[2]((0))
@@ -133,45 +102,53 @@ def create_functional(model):
   (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
 
   # get model output
-  phi_d_dim = phi_d*model.h_0*model.phi_0*model.norms[2]
+  phi_d_dim = phi_d*model.h_0*model.norms[0]*model.phi_0*model.norms[2]
 
   # generate target depth function
   depth_fn = 0
   for i, c in enumerate(ec_coeff):
-    depth_fn += c*pow(x_N*model.y*model.h_0, i)
+    depth_fn += c*pow(x_N*model.y*model.h_0*model.norms[0], i)
 
-  # basis of local filtering idea - not using
-  # f = 0
-  # for loc in phi_d_x:
-  #     filt = (exp(smooth_abs(x_N*model.y*model.h_0 - loc)**-1.0))
-  #     filt_diff = filt*(phi_d-model.phi_d_aim)
-  #     f += inner(filt_diff, filt_diff)
-
-  filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 100)))
+  filt = e**-(smooth_pos(x_N*model.y*model.h_0*model.norms[0] - (phi_d_x[-1] + 100)))
   diff = filt*(phi_d_dim-depth_fn)
-  model.fn = inner(diff, diff)*smooth_min((x_N*model.h_0)/(phi_d_x[-1]+100), min=1.0)
-  return inner(diff, diff)*smooth_min((x_N*model.h_0)/(phi_d_x[-1]+100), min=1.0)*dx
+  model.fn = inner(diff, diff)*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)
+  return inner(diff, diff)*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)*dx
 
 def prep(values, one_shot = False):
 
   model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
-  model.initialise()
 
+  # initialise function spaces
+  model.initialise_function_spaces()
+  load_options.post_init(model, model.xml_path)
+
+  # define parameters
   if one_shot:
-    V = project(Expression(str(values[0])), model.R, name="R")
+    model.norms = [Constant(1.0), Constant(1.0), Constant(1.0)]
+    model.h_0 = project(Expression(str(values[0])), model.R, name="h_0")
     R = project(Expression(str(values[1])), model.R, name="R")
     model.phi_0 = project(Expression(str(values[2])), model.R, name="phi_0")
-    model.norms = [Constant(1.0), Constant(1.0), Constant(1.0)]
   else:
     # normalise starting values
     model.norms = [Constant(val) for val in values]
-    V = project(Expression('1.0'), model.R, name="V")
-    R = project(Expression('1.0'), model.R, name="R") #*pow(10, 2.5)'), model.R, name="R")
-    # model.norms[1] = model.norms[1]*1*10**(-2.5)
+    model.h_0 = project(Expression('1.0'), model.R, name="h_0")
+    R = project(Expression('1e3'), model.R, name="R")
+    model.norms[1] = model.norms[1]*1e-3
     model.phi_0 = project(Expression('1.0'), model.R, name="phi_0")
 
-  # generate functions for h_0 and beta
-  gen_fns(model, V, R)
+  # define beta as form
+  D = 2.5e-4
+  Re_p = Constant(D**2/(18*1e-6))
+  model.beta = model.g*Re_p/(model.g*model.h_0*model.norms[0])**0.5
+
+  # dummy function including R to get things started
+  R_ = Function(model.V)
+  v = TestFunction(model.V)
+  F = v*R*dx - v*R_*dx
+  solve(F==0, R_)
+
+  # define form with new beta
+  model.generate_form()
 
   # calculate h_0 and beta
   prep_model_cb(model)
@@ -183,12 +160,12 @@ def prep(values, one_shot = False):
     if override['id'] == 'timestep':
       override['function'] = model.dX*R*model.norms[1]/model.Fr*model.adapt_cfl
   
-  return model, V, R
+  return model, R
 
 # multiprocessing
 def one_shot(values):
 
-  model, V, R = prep(values, one_shot = True)
+  model, R = prep(values, one_shot = True)
 
   # create ic_dict for model
   ic_dict = {}       
@@ -213,8 +190,8 @@ def one_shot(values):
   val = assemble(f)
 
   int_phi_d_aim = assemble(model.phi_d_aim*dx)
-  int_phi_d_dim = assemble(phi_d*model.h_0*model.phi_0*dx)
-  int_diff = assemble((model.phi_d_aim-phi_d*model.h_0*model.phi_0)*dx)   
+  int_phi_d_dim = assemble(phi_d*model.h_0*model.norms[0]*model.phi_0*dx)
+  int_diff = assemble((model.phi_d_aim-phi_d*model.h_0*model.norms[0]*model.phi_0)*dx)   
 
   v = TestFunction(model.V)
   u = TrialFunction(model.V)
@@ -229,24 +206,27 @@ def one_shot(values):
 
   return (
     values, 
-    [val, x_N*model.h_0.vector().array()[0], phi_d.max()*model.h_0.vector().array()[0]*model.phi_0.vector().array()[0]], 
-    [model.h_0.vector().array()[0], model.beta.vector().array()[0]]
+    [val, x_N*model.h_0.vector().array()[0]*model.norms[0]((0,0)), 
+     phi_d.max()*model.h_0.vector().array()[0]*model.norms[0]((0,0))*model.phi_0.vector().array()[0]], 
+    [model.h_0.vector().array()[0]*model.norms[0]((0,0)), model.beta.vector().array()[0]]
     )
 
 def optimisation(values):
   
-  model, V, R = prep(values)
+  model, R = prep(values)
 
-  parameters = [InitialConditionParameter(V), 
-                InitialConditionParameter(R), 
+  parameters = [InitialConditionParameter(model.h_0), 
+                InitialConditionParameter(R),
                 InitialConditionParameter(model.phi_0)]
-  # parameters = [InitialConditionParameter(V), 
-  #               InitialConditionParameter(model.phi_0)]
 
-  bnds = ((5e4/model.norms[0]((0,0)), 0.5/model.norms[1]((0,0)), 1e-3/model.norms[2]((0,0))), 
-          (2e5/model.norms[0]((0,0)),  10/model.norms[1]((0,0)), 2e-1/model.norms[2]((0,0))))
-  # bnds = ((5e4/model.norms[0]((0,0)), 1e-3/model.norms[2]((0,0))), 
-  #         (2e5/model.norms[0]((0,0)), 2e-1/model.norms[2]((0,0))))
+  bnds =   (
+      ( 
+          10/model.norms[0]((0,0)), 0.25/model.norms[1]((0,0)), 1e-3/model.norms[2]((0,0)) 
+          ), 
+      ( 
+          6000/model.norms[0]((0,0)), 5.0/model.norms[1]((0,0)), 2e-1/model.norms[2]((0,0))
+          )
+      )
 
   # functional
   int_0 = create_functional(model)
@@ -275,11 +255,11 @@ def optimisation(values):
     
     depth_fn = 0
     for i, c in enumerate(model.ec_coeff):
-      depth_fn += c*pow(x_N*model.y*model.h_0, i)
+      depth_fn += c*pow(x_N*model.y*model.h_0*model.norms[0], i)
     d = Function(model.V)
     solve(v*depth_fn*dx - v*d*dx == 0, d)
 
-    filt = e**-(smooth_pos(x_N*model.y*model.h_0 - (phi_d_x[-1] + 100)))
+    filt = e**-(smooth_pos(x_N*model.y*model.h_0*model.norms[0] - (phi_d_x[-1] + 100)))
     f = Function(model.V)
     solve(v*filt*dx - v*f*dx == 0, f)
 
@@ -289,15 +269,15 @@ def optimisation(values):
     
     m = Function(model.R)
     v = TestFunction(model.R)
-    mf = v*smooth_min((x_N*model.h_0)/(phi_d_x[-1]+100), min=1.0)*dx
+    mf = v*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)*dx
     solve(mf - v*m*dx == 0, m)
     
     y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-    results = {'phi_d':phi_d*model.h_0.vector().array()[0]*model.phi_0.vector().array()[0]*model.norms[2]((0,0)), 
+    results = {'phi_d':phi_d*model.h_0.vector().array()[0]*model.norms[0]((0,0))*model.phi_0.vector().array()[0]*model.norms[2]((0,0)), 
                'target':input_output.map_function_to_array(d, model.mesh), 
                'filter':input_output.map_function_to_array(f, model.mesh), 
                'y':y, 
-               'x_N':x_N*model.h_0.vector().array()[0],
+               'x_N':x_N*model.h_0.vector().array()[0]*model.norms[0]((0,0)),
                'J':input_output.map_function_to_array(J, model.mesh),
                'm':input_output.map_function_to_array(m, model.mesh)[0]}
 
@@ -313,33 +293,25 @@ def optimisation(values):
                                            scale = 1e-1, prep_model_cb=prep_model_cb, 
                                            prep_target_cb=output_final_cb)
 
-  rfn = ReducedFunctionalNumPy(rf)
+  # rfn = ReducedFunctionalNumPy(rf)
 
-  # redo custom init
-  rfn.scaled_parameters = scaled_parameters
-  rfn.first_run = True
-  rfn.prep_model_cb = prep_model_cb
-  rfn.model = model
+  # # redo custom init
+  # rfn.scaled_parameters = scaled_parameters
+  # rfn.first_run = True
+  # rfn.prep_model_cb = prep_model_cb
+  # rfn.model = model
 
-  # solve forward model once
-  rf.compute_functional(value=[param.coeff for param in parameters], annotate=True)
+  # # solve forward model once
+  # rf.compute_functional(value=[param.coeff for param in parameters], annotate=True)
 
-  nlp = rfn.pyipopt_problem(bounds=bnds)
-  a_opt = nlp.solve(full=False)
+  # nlp = rfn.pyipopt_problem(bounds=bnds)
+  # a_opt = nlp.solve(full=False)
 
-  # m_opt = minimize(rf, method = "L-BFGS-B", 
-  #                  options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
-  #                  bounds = bnds,
-  #                  in_euclidian_space = False) 
+  m_opt = minimize(rf, method = "L-BFGS-B", 
+                   options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
+                   bounds = bnds,
+                   in_euclidian_space = False) 
 
 if __name__=="__main__":
   args = eval(sys.argv[1])
-  # try:
-  # print one_shot(args)
-  # except:
-  #     print (
-  #     args, 
-  #     [0, 0, 0], 
-  #     [0, 0]
-  #     )
   optimisation(args)
