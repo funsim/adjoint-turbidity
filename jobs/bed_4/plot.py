@@ -5,7 +5,7 @@ import pickle
 colours = 'b', 'g', 'r', 'c', 'm', 'y', 'k', '0.25', '0.5', '0.75'
 lines = '-', '--', '-.'
 
-for i in [0,101,202,303,404,505,606,707,808]:
+for i in range(3):
     f = open('results_%d.pckl'%(i+1),'r')
     r = pickle.load(f)
     f.close()

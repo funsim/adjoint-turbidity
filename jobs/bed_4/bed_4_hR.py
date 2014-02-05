@@ -17,8 +17,8 @@ set_log_level(ERROR)
 
 def smooth_abs(val, min = 0.25):
   return (val**2.0 + min)**0.5
-def smooth_pos(val):
-  return (val + smooth_abs(val))/2.0
+def smooth_pos(val, min = 0.25):
+  return (val + smooth_abs(val, min))/2.0
 def smooth_min(val, min = 1.0):
   return smooth_pos(val - min) + min
 
@@ -50,47 +50,49 @@ def fit(n_coeff):
     coeff_C.append(Constant(c))
   return coeff_C
 
-ec_coeff = fit(3)
+ec_coeff = fit(2)
 
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
-l = 170000
+# l = 300000
 
-mesh = IntervalMesh(20, 0.0, 1.0)
-fs = FunctionSpace(mesh, 'CG', 1)
-y = project(Expression('x[0]'), fs)
-depth_fn = 0
-for i, c in enumerate(ec_coeff):
-  depth_fn += c*pow(l*y, i)
-d = Function(fs)
-v = TestFunction(fs)
-solve(v*depth_fn*dx - v*d*dx == 0, d)
+# mesh = IntervalMesh(20, 0.0, 1.0)
+# fs = FunctionSpace(mesh, 'CG', 1)
+# y = project(Expression('x[0]'), fs)
+# depth_fn = 0
+# for i, c in enumerate(ec_coeff):
+#   depth_fn += c*pow(l*y, i)
+# d = Function(fs)
+# v = TestFunction(fs)
+# solve(v*depth_fn*dx - v*d*dx == 0, d)
 
-x = np.linspace(0,l,21)
-d_2 = np.zeros(x.shape)
-for i, x_ in enumerate(x):
-  for pow, c in enumerate(ec_coeff):
-    d_2[i] += c*x_**pow
+# x = np.linspace(0,l,21)
+# d_2 = np.zeros(x.shape)
+# for i, x_ in enumerate(x):
+#   for pow, c in enumerate(ec_coeff):
+#     d_2[i] += c*x_**pow
 
-filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
-f = Function(fs)
-solve(v*filt*dx - v*f*dx == 0, f)
+# filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
+# f = Function(fs)
+# solve(v*filt*dx - v*f*dx == 0, f)
 
-fd = Function(fs)
-solve(v*filt*depth_fn*dx - v*fd*dx == 0, fd)
+# fd = Function(fs)
+# solve(v*smooth_pos(depth_fn,0.001)*dx - v*fd*dx == 0, fd)
 
+# # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+# #          input_output.map_function_to_array(d, mesh))
 # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-#          input_output.map_function_to_array(d, mesh))
-plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-         input_output.map_function_to_array(fd, mesh))
-# plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-#          input_output.map_function_to_array(f, mesh))
+#          input_output.map_function_to_array(fd, mesh))
+# # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+# #          input_output.map_function_to_array(f, mesh))
 
-# plt.plot(x, d_2)
-# plt.ylim(0,1.2)
+# plt.plot(phi_d_x, phi_d_y)
 
-plt.show()
-sys.exit()
+# # plt.plot(x, d_2)
+# # plt.ylim(0,1.2)
+
+# plt.show()
+# sys.exit()
 
 def prep_model_cb(model, value = None):
   
@@ -109,10 +111,14 @@ def create_functional(model):
   for i, c in enumerate(ec_coeff):
     depth_fn += c*pow(x_N*model.y*model.h_0*model.norms[0], i)
 
-  filt = e**-(smooth_pos(x_N*model.y*model.h_0*model.norms[0] - (phi_d_x[-1] + 100)))
-  diff = filt*(phi_d_dim-depth_fn)
-  model.fn = inner(diff, diff)*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)
-  return inner(diff, diff)*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)*dx
+  #filt = e**-(smooth_pos(x_N*model.y*model.h_0*model.norms[0] - (phi_d_x[-1] + 100)))
+  #diff = filt*(phi_d_dim-depth_fn)
+  #model.fn = inner(diff, diff)*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)
+  #return inner(diff, diff)*smooth_min((x_N*model.h_0*model.norms[0])/(phi_d_x[-1]+100), min=1.0)*dx
+
+  diff = (phi_d_dim - smooth_pos(depth_fn,min=0.001))
+  model.fn = inner(diff, diff)
+  return inner(diff, diff)*dx
 
 def prep(values, one_shot = False):
 
@@ -130,10 +136,9 @@ def prep(values, one_shot = False):
     model.phi_0 = project(Expression(str(values[2])), model.R, name="phi_0")
   else:
     # normalise starting values
-    model.norms = [Constant(val) for val in values]
-    model.h_0 = project(Expression('1.0'), model.R, name="h_0")
-    R = project(Expression('1e3'), model.R, name="R")
-    model.norms[1] = model.norms[1]*1e-3
+    model.norms = [Constant(1e-2*values[0]), Constant(1e-7*values[1]), Constant(1*values[2])]
+    model.h_0 = project(Expression('1e2'), model.R, name="h_0")
+    R = project(Expression('1e7'), model.R, name="R")
     model.phi_0 = project(Expression('1.0'), model.R, name="phi_0")
 
   # define beta as form
@@ -293,24 +298,24 @@ def optimisation(values):
                                            scale = 1e-1, prep_model_cb=prep_model_cb, 
                                            prep_target_cb=output_final_cb)
 
-  # rfn = ReducedFunctionalNumPy(rf)
+  rfn = ReducedFunctionalNumPy(rf)
 
-  # # redo custom init
-  # rfn.scaled_parameters = scaled_parameters
-  # rfn.first_run = True
-  # rfn.prep_model_cb = prep_model_cb
-  # rfn.model = model
+  # redo custom init
+  rfn.scaled_parameters = scaled_parameters
+  rfn.first_run = True
+  rfn.prep_model_cb = prep_model_cb
+  rfn.model = model
 
-  # # solve forward model once
-  # rf.compute_functional(value=[param.coeff for param in parameters], annotate=True)
+  # solve forward model once
+  rf.compute_functional(value=[param.coeff for param in parameters], annotate=True)
 
-  # nlp = rfn.pyipopt_problem(bounds=bnds)
-  # a_opt = nlp.solve(full=False)
+  nlp = rfn.pyipopt_problem(bounds=bnds)
+  a_opt = nlp.solve(full=False) 
 
-  m_opt = minimize(rf, method = "L-BFGS-B", 
-                   options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
-                   bounds = bnds,
-                   in_euclidian_space = False) 
+  # m_opt = minimize(rf, method = "TNC", 
+  #                  options = {'disp': True, 'gtol': 1e-20, 'ftol': 1e-20}, 
+  #                  bounds = bnds,
+  #                  in_euclidian_space = False) 
 
 if __name__=="__main__":
   args = eval(sys.argv[1])
