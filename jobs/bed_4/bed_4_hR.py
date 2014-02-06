@@ -279,7 +279,7 @@ def optimisation(values):
   if method == "BF":
     from scipy.optimize import brute
     rranges = ((bnds[0][0], bnds[1][0]), (bnds[0][0], bnds[1][0]))
-    resbrute = brute(rf, rranges, Ns = 2, full_output=True,
+    resbrute = brute(rf, rranges, Ns = 20, full_output=True,
                      finish=None)    
     f = open('bf.pckl','w')
     pickle.dump(resbrute, f)
