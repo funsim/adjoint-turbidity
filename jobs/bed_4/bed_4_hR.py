@@ -172,6 +172,7 @@ def optimisation(values):
   
   if method == 'BF':
     model, R = prep(values, True)
+    print [norm((0,0)) for norm in model.norms]
   else:
     model, R = prep(values)
 
@@ -211,7 +212,6 @@ def optimisation(values):
         a = value[0]((0,0))
         b = value[1]((0,0))
       else:
-        print value
         a = value[0]
         b = value[1]
 
@@ -278,7 +278,8 @@ def optimisation(values):
 
   if method == "BF":
     from scipy.optimize import brute
-    rranges = ((bnds[0][0], bnds[1][0]), (bnds[0][0], bnds[1][0]))
+    rranges = ((bnds[0][0], bnds[1][0]), (bnds[0][1], bnds[1][1]))
+    print rranges
     resbrute = brute(rf, rranges, Ns = 20, full_output=True,
                      finish=None)    
     f = open('bf.pckl','w')
