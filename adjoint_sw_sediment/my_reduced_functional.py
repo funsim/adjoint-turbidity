@@ -13,13 +13,20 @@ def to_tuple(obj):
     else:
         return obj
 
+class ScaledParameter():
+  def __init__(self, parameter, value, term, time):
+    self.parameter = parameter
+    self.value = value
+    self.term = term
+    self.time = time
+
 class MyReducedFunctional(ReducedFunctional):
 
     results = {'id':0}
 
-    def __init__(self, model, functional, scaled_parameters, parameter, scale = 1.0, eval_cb = None, 
+    def __init__(self, model, functional, parameter, scaled_parameters = [], scale = 1.0, eval_cb = None, 
                  derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, 
-                 prep_model_cb=None, ignore = [], cache = None, adj_plotter = None):
+                 prep_model_cb=None, ignore = [], cache = None, adj_plotter = None, autoscale = True):
 
         # functional setup
         self.scaled_parameters = scaled_parameters
@@ -38,136 +45,187 @@ class MyReducedFunctional(ReducedFunctional):
                                                   replay_cb = replay_cb, hessian_cb = hessian_cb, 
                                                   ignore = ignore, cache = cache)
 
-    def compute_functional(self, value, annotate):
-        '''run forward model and compute functional'''
+        self.auto_scaling = autoscale
+        self.auto_scale = None
 
-        # store ic
-        self.results['id'] += 1
-        self.results['ic'] = to_tuple(value)
+        def compute_functional(m, annotate):
+            '''run forward model and compute functional'''
+
+            # store ic
+            self.results['id'] += 1
+            self.results['ic'] = to_tuple(m)
+
+            # reset dolfin-adjoint
+            adj_reset()
+            parameters["adjoint"]["record_all"] = True 
+            dolfin.parameters["adjoint"]["stop_annotating"] = False
+
+            # initialise functional
+            j = 0
+
+            # replace parameters
+            for i in range(len(m)):
+                replace_ic_value(self.parameter[i], m[i])
+
+            # prepare model
+            if self.prep_model_cb is not None:
+                self.prep_model_cb(self.model, m)
+
+            # create ic_dict for model
+            ic_dict = {}       
+            for override in self.model.override_ic:
+                if override['override']:
+                    if override['FS'] == 'CG':
+                        fs = FunctionSpace(self.model.mesh, 'CG', 1)
+                    else:
+                        fs = FunctionSpace(self.model.mesh, 'R', 0)
+
+                    v = TestFunction(fs)
+                    u = TrialFunction(fs)
+                    a = v*u*dx
+                    L = v*override['function']*dx
+                    ic_dict[override['id']] = Function(fs, name='ic_' + override['id'])
+                    solve(a==L, ic_dict[override['id']])
+
+            # set model ic
+            self.model.set_ic(ic_dict = ic_dict)
+
+            # calculate functional value for ic
+            f = 0
+            for term in self.functional.timeform.terms:
+                if term.time == timeforms.START_TIME:
+                    f += term.form
+            if self.first_run:
+                for param in self.scaled_parameters:
+                    if param.time == timeforms.START_TIME:
+                        param.parameter.assign(Constant(param.value/assemble(param.term)))
+            if f != 0:
+                j += assemble(f)
+
+            # run forward model
+            self.model.solve()
+
+            # prepare target
+            if self.prep_target_cb is not None:
+                self.prep_target_cb(self.model)
+
+            # calculate functional value for ec
+            f = 0
+            for term in self.functional.timeform.terms:
+                if term.time == timeforms.FINISH_TIME:
+                    f += term.form
+            if self.first_run:
+                for param in self.scaled_parameters:
+                    if param.time == timeforms.FINISH_TIME:
+                        param.parameter.assign(Constant(param.value/assemble(param.term)))
+            j += assemble(f)
+
+            self.results['j'] = j
+            info_green('Functional value: %f'%j)
+
+            self.first_run = False
+            return j * self.scale
+
+        def compute_gradient(m, forget=True, project=False):
+            dj = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
+            memoizable_dj = [dj_.vector().array() for dj_ in dj]
+            return memoizable_dj
+
+        hash_keys = False
+        self.compute_functional_mem = memoize.MemoizeMutable(compute_functional, hash_keys)
+        self.compute_gradient_mem = memoize.MemoizeMutable(compute_gradient, hash_keys)
+
+        self.load_checkpoint()
+
+    def save_checkpoint(self, base_filename):
+        base_path = base_filename
+        self.compute_functional_mem.save_checkpoint(base_path + "_fwd.pckl")
+        self.compute_gradient_mem.save_checkpoint(base_path + "_adj.pckl")
+
+    def load_checkpoint(self, base_filename='checkpoint'):
+        base_path = base_filename
+        self.compute_functional_mem.load_checkpoint(base_path + "_fwd.pckl")
+        self.compute_gradient_mem.load_checkpoint(base_path + "_adj.pckl")
+
+    def __call__(self, m, annotate = True):
+
+        # some checks
+        if not isinstance(m, (list, tuple, np.ndarray)):
+            m = [m]
+        if len(m) != len(self.parameter):
+            raise ValueError, "The number of parameters must equal the number of parameter values."
+
+        memoizable_m = [val.vector().array() for val in m]
+        self.last_m = memoizable_m
         
         info_blue('Start evaluation of j')
         timer = dolfin.Timer("j evaluation") 
 
-        # reset dolfin-adjoint
-        adj_reset()
-        parameters["adjoint"]["record_all"] = True 
-        dolfin.parameters["adjoint"]["stop_annotating"] = False
+        j = self.compute_functional_mem(memoizable_m, annotate)
 
-        # initialise functional
-        j = 0
-
-        # replace parameters
-        for i in range(len(value)):
-            replace_ic_value(self.parameter[i], value[i])
-
-        # prepare model
-        if self.prep_model_cb is not None:
-            self.prep_model_cb(self.model, value)
-
-        # create ic_dict for model
-        ic_dict = {}       
-        for override in self.model.override_ic:
-            if override['override']:
-                if override['FS'] == 'CG':
-                    fs = FunctionSpace(self.model.mesh, 'CG', 1)
-                else:
-                    fs = FunctionSpace(self.model.mesh, 'R', 0)
-
-                v = TestFunction(fs)
-                u = TrialFunction(fs)
-                a = v*u*dx
-                L = v*override['function']*dx
-                ic_dict[override['id']] = Function(fs, name='ic_' + override['id'])
-                solve(a==L, ic_dict[override['id']])
-
-        # set model ic
-        self.model.set_ic(ic_dict = ic_dict)
-
-        # calculate functional value for ic
-        f = 0
-        for term in self.functional.timeform.terms:
-            if term.time == timeforms.START_TIME:
-                f += term.form
-        if self.first_run:
-            for param in self.scaled_parameters:
-                if param.time == timeforms.START_TIME:
-                    param.parameter.vector()[:] = np.array([param.value/assemble(param.term)])
-        if f != 0:
-            j += assemble(f)
-
-        # run forward model
-        self.model.solve()
-
-        # dolfin.parameters["adjoint"]["stop_annotating"] = True
         timer.stop()
         info_blue('Runtime: ' + str(timer.value())  + " s")
 
-        # prepare target
-        if self.prep_target_cb is not None:
-            self.prep_target_cb(self.model)
+        if self.auto_scaling:
+          if self.auto_scale is None:
+            dj = self.derivative(forget=False, project=False)
+            dj = np.array([dj_.vector().array() for dj_ in dj])
+            r = np.array(memoizable_m)/dj
+            self.auto_scale = 0.1/r.max()
+          else:
+            j = self.auto_scale*j
 
-        # calculate functional value for ec
-        f = 0
-        for term in self.functional.timeform.terms:
-            if term.time == timeforms.FINISH_TIME:
-                f += term.form
-        if self.first_run:
-            for param in self.scaled_parameters:
-                if param.time == timeforms.FINISH_TIME:
-                    param.parameter.vector()[:] = np.array([param.value/assemble(param.term)])
-                    # print assemble(param.term), param.parameter.vector().array()
-        j += assemble(f)
+        return j
 
-        self.results['j'] = j
-        info_green('Functional value: %f'%j)
-
-        self.first_run = False
-        return j * self.scale
-
-    def __call__(self, value, annotate = True):
-
-        # some checks
-        if not isinstance(value, (list, tuple, np.ndarray)):
-            value = [value]
-        if len(value) != len(self.parameter):
-            raise ValueError, "The number of parameters must equal the number of parameter values."
-
-        return self.compute_functional(value, annotate)
-        
     def derivative(self, forget=True, project=False):
         ''' timed version of parent function '''
         
         info_green('Start evaluation of dj')
         timer = dolfin.Timer("dj evaluation") 
 
-        scaled_dfunc_value = super(MyReducedFunctional, self).derivative(forget=forget, project=project)
+        dj = self.compute_gradient_mem(self.last_m, forget, project)
 
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
 
-        value = scaled_dfunc_value
+        self.save_checkpoint("checkpoint")
+        
+        if self.auto_scaling and self.auto_scale is not None:
+          dj = self.auto_scale*np.array(dj)
 
-        print 'd0=', value[0]((0)), 'd1=', value[1]((0))#, 'd2=', value[2]((0))
+        dj_f = []
+        for i, dj_ in enumerate(dj):
+          dj_f.append(Function(self.parameter[i].coeff.function_space()))
+          dj_f[-1].vector()[:] = dj_
+
+        print 'd0=', dj[0], 'd1=', dj[1]
         # save gradient
-        self.results['gradient'] = to_tuple(value)
+        self.results['gradient'] = to_tuple(dj)
 
         # save results dict
         f = open('opt_%d.pckl'%self.results['id'],'w')
         pickle.dump(self.results, f)
         f.close()
         
-        return value
+        return dj_f
 
 def replace_ic_value(parameter, new_value):
     ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
 
-    # Case 1: The parameter value and new_vale are Functions
+    # Case 1: The parameter value and new_value are Functions
     if hasattr(new_value, 'vector'):
         function = parameter.coeff
         function.assign(new_value)
 
+    # Case 2: The new value is a numpy array
+    elif isinstance(new_value, np.ndarray):
+        function = parameter.coeff
+        f = Function(function.function_space())
+        f.vector()[:] = new_value
+        function.assign(f)
+
     # Case 2: The new_value is a float
-    if isinstance(new_value, np.float64):
+    elif isinstance(new_value, np.float64):
         function = parameter.coeff
         function.assign(Constant(new_value))
 

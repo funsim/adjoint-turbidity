@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<adjoint_sw_sediment>
+  <project_name>
+    <string_value lines="1">basic</string_value>
+  </project_name>
+  <mesh/>
+  <time_options>
+    <time_discretisation name="runge_kutta"/>
+    <adaptive_timestep>
+      <cfl_criteria>
+        <real_value rank="0">0.1</real_value>
+      </cfl_criteria>
+    </adaptive_timestep>
+    <finish_time>
+      <real_value rank="0">0.3</real_value>
+    </finish_time>
+  </time_options>
+  <output_options>
+    <ts_info/>
+  </output_options>
+  <spatial_discretisation>
+    <discretisation name="discontinuous"/>
+  </spatial_discretisation>
+  <non_dimensional_numbers/>
+  <initial_conditions>
+    <initial_length>
+      <c_string>
+        <string_value lines="1">1.0</string_value>
+      </c_string>
+      <override/>
+    </initial_length>
+    <timestep>
+      <c_string>
+        <string_value lines="1">dX/1.19*cfl</string_value>
+      </c_string>
+      <override/>
+    </timestep>
+    <variables>
+      <var name="dX">
+        <code>
+          <string_value lines="20" type="code" language="python">model.dX((0,0))</string_value>
+        </code>
+      </var>
+      <var name="cfl">
+        <code>
+          <string_value lines="20" type="code" language="python">model.adapt_cfl.vector().array()[0]</string_value>
+        </code>
+      </var>
+    </variables>
+  </initial_conditions>
+</adjoint_sw_sediment>

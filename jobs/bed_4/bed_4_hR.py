@@ -53,89 +53,48 @@ def fit(n_coeff):
 
 ec_coeff = fit(2)
 
-# from matplotlib import pyplot as plt
+def plot_target():
+  from matplotlib import pyplot as plt
 
-# l = 300000
+  l = 300000
 
-# mesh = IntervalMesh(20, 0.0, 1.0)
-# fs = FunctionSpace(mesh, 'CG', 1)
-# y = project(Expression('x[0]'), fs)
-# depth_fn = 0
-# for i, c in enumerate(ec_coeff):
-#   depth_fn += c*pow(l*y, i)
-# d = Function(fs)
-# v = TestFunction(fs)
-# solve(v*depth_fn*dx - v*d*dx == 0, d)
+  mesh = IntervalMesh(20, 0.0, 1.0)
+  fs = FunctionSpace(mesh, 'CG', 1)
+  y = project(Expression('x[0]'), fs)
+  depth_fn = 0
+  for i, c in enumerate(ec_coeff):
+    depth_fn += c*pow(l*y, i)
+  d = Function(fs)
+  v = TestFunction(fs)
+  solve(v*depth_fn*dx - v*d*dx == 0, d)
 
-# x = np.linspace(0,l,21)
-# d_2 = np.zeros(x.shape)
-# for i, x_ in enumerate(x):
-#   for pow, c in enumerate(ec_coeff):
-#     d_2[i] += c*x_**pow
+  x = np.linspace(0,l,21)
+  d_2 = np.zeros(x.shape)
+  for i, x_ in enumerate(x):
+    for pow, c in enumerate(ec_coeff):
+      d_2[i] += c*x_**pow
 
-# filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
-# f = Function(fs)
-# solve(v*filt*dx - v*f*dx == 0, f)
+  filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
+  f = Function(fs)
+  solve(v*filt*dx - v*f*dx == 0, f)
 
-# fd = Function(fs)
-# solve(v*smooth_pos(depth_fn,0.001)*dx - v*fd*dx == 0, fd)
+  fd = Function(fs)
+  solve(v*smooth_pos(depth_fn,0.001)*dx - v*fd*dx == 0, fd)
 
-# # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-# #          input_output.map_function_to_array(d, mesh))
-# plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-#          input_output.map_function_to_array(fd, mesh))
-# # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-# #          input_output.map_function_to_array(f, mesh))
+  # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+  #          input_output.map_function_to_array(d, mesh))
+  plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+           input_output.map_function_to_array(fd, mesh))
+  # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
+  #          input_output.map_function_to_array(f, mesh))
 
-# plt.plot(phi_d_x, phi_d_y)
+  plt.plot(phi_d_x, phi_d_y)
 
-# # plt.plot(x, d_2)
-# # plt.ylim(0,1.2)
+  # plt.plot(x, d_2)
+  # plt.ylim(0,1.2)
 
-# plt.show()
-# sys.exit()
-
-def prep(values, one_shot = False):
-
-  model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
-
-  # initialise function spaces
-  model.initialise_function_spaces()
-  load_options.post_init(model, model.xml_path)
-
-  # define parameters
-  if one_shot:
-    model.norms = [Constant(1.0), Constant(1.0)]
-    model.h_0 = project(Expression(str(values[0])), model.R, name="h_0")
-    R = project(Expression(str(values[1])), model.R, name="R")
-  else:
-    # normalise starting values
-    model.norms = [Constant(1*values[0]), Constant(1e-5*values[1])]
-    model.h_0 = project(Expression('1'), model.R, name="h_0")
-    R = project(Expression('1e5'), model.R, name="R")
-
-  # define beta as form
-  D = 2.5e-4
-  Re_p = Constant(D**2/(18*1e-6))
-  model.beta = model.g*Re_p/(model.g*model.h_0*model.norms[0])**0.5
-
-  # dummy function including R to get things started
-  R_ = Function(model.V)
-  v = TestFunction(model.V)
-  F = v*R*dx - v*R_*dx
-  solve(F==0, R_)
-
-  # define form with new beta
-  model.generate_form()
-
-  # model ic overrides
-  for override in model.override_ic:
-    if override['id'] == 'initial_length':
-      override['function'] = R*model.norms[1]
-    if override['id'] == 'timestep':
-      override['function'] = model.dX*R*model.norms[1]/model.Fr*model.adapt_cfl
-  
-  return model, R
+  plt.show()
+  sys.exit()
 
 def create_functional(model):
 
@@ -168,42 +127,45 @@ def create_functional(model):
 def optimisation(values):
 
   methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF" ]
-  method = methods[3]  
-  
-  if method == 'BF':
-    model, R = prep(values, True)
+  method = methods[0]  
+
+  model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
+
+  # initialise function spaces
+  model.initialise_function_spaces()
+  load_options.post_init(model, model.xml_path)
+
+  # define parameters   
+  R = project(Constant(values[1]), model.R, name='R')
+  if method in ["L-BFGS-B", "IPOPT"]:
+    # values should be scaled to be similar
+    r = values[0]/values[1]
+    model.norms = Constant(r), Constant(1)
+    model.h_0.assign(Constant(values[0]/r))
   else:
-    model, R = prep(values)
+    model.norms = Constant(1.0), Constant(1.0)
+    model.h_0.assign(Constant(values[0]))
 
-  parameters = [InitialConditionParameter(model.h_0), 
-                InitialConditionParameter(R)]
+  # dummy solves to kick off
+  v = TestFunction(model.R)
+  dummy = Function(model.R)
+  solve(v*R*dx - v*dummy*dx == 0, dummy)
+  solve(v*model.h_0*dx - v*dummy*dx == 0, dummy)
 
-  bnds =   (
-      ( 
-          100/model.norms[0]((0,0)), 0.25/model.norms[1]((0,0)) 
-          ), 
-      ( 
-          6000/model.norms[0]((0,0)), 5.0/model.norms[1]((0,0))
-          )
-      )
+  # define beta as form
+  D = 2.5e-4
+  Re_p = Constant(D**2/(18*1e-6))
+  model.beta = model.g*Re_p/(model.g*model.h_0*model.norms[0])**0.5
 
-  # functional
-  int_0 = create_functional(model)
-  int_0_scale = Function(model.R)
-  functional = Functional(int_0_scale*int_0*dt[FINISH_TIME])
+  # define form with new beta
+  model.generate_form()
 
-  class scaled_parameter():
-    def __init__(self, parameter, value, term, time):
-      self.parameter = parameter
-      self.value = value
-      self.term = term
-      self.time = time
-
-  scaled_parameters = [
-    scaled_parameter(int_0_scale, 1e0, 
-                     int_0, 
-                     timeforms.FINISH_TIME)
-    ]
+  # model ic overrides
+  for override in model.override_ic:
+    if override['id'] == 'initial_length':
+      override['function'] = R*model.norms[1]
+    if override['id'] == 'timestep':
+      override['function'] = model.dX*R*model.norms[1]/model.Fr*model.adapt_cfl
 
   def prep_model_cb(model, value = None):
     if value is not None:
@@ -211,11 +173,11 @@ def optimisation(values):
         a = value[0]((0,0))
         b = value[1]((0,0))
       else:
-        print value
         a = value[0]
         b = value[1]
 
-      print '0=', a*model.norms[0]((0,0)), ' 1=', b*model.norms[1]((0,0))
+      print 'raw:    h=', a, ' R=', b
+      print 'scaled: h=', a*model.norms[0]((0,0)), ' R=', b*model.norms[1]((0,0))
 
   model.out_id = 0
   def prep_target_cb(model):
@@ -248,15 +210,32 @@ def optimisation(values):
     f.close()
     model.out_id += 1
 
-  prep_target_cb(model)
+  parameters = [InitialConditionParameter(model.h_0), 
+                InitialConditionParameter(R)]
 
-  rf = MyReducedFunctional(model, functional, scaled_parameters, parameters, 
-                           scale = 1e-1, prep_model_cb=prep_model_cb, 
-                           prep_target_cb=prep_target_cb)      
+  bnds =   (
+      ( 
+          100/model.norms[0]((0,0)), 0.25/model.norms[1]((0,0)) 
+          ), 
+      ( 
+          6000/model.norms[0]((0,0)), 5.0/model.norms[1]((0,0))
+          )
+      )
 
-  if method in ("TNC", "IPOPT"):
-    # solve forward model once
-    rf.compute_functional(value=[param.coeff for param in parameters], annotate=True)
+  # functional
+  J = create_functional(model)
+  J_scale = Function(model.R)
+  functional = Functional(J_scale*J*dt[FINISH_TIME])
+
+  s = [ ScaledParameter(J_scale, 1.0, J, timeforms.FINISH_TIME) ]
+  
+  rf = MyReducedFunctional(model, functional, parameters, scaled_parameters = s,
+                           scale = 1.0, prep_model_cb=prep_model_cb, 
+                           prep_target_cb=prep_target_cb, autoscale = True)  
+
+  # run forward model first for some optimisation routines
+  if method in ("IPOPT", "TNC"):
+    rf([p.coeff for p in parameters])
 
   if method == "IPOPT":
     rfn = ReducedFunctionalNumPy(rf)

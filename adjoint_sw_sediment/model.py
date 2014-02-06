@@ -19,8 +19,8 @@ import load_options
 ############################################################
 # DOLFIN SETTINGS
 
-parameters["form_compiler"]["optimize"]     = False
-parameters["form_compiler"]["cpp_optimize"] = False
+parameters["form_compiler"]["optimize"]     = True
+parameters["form_compiler"]["cpp_optimize"] = True
 dolfin.parameters["optimization"]["test_gradient"] = False
 dolfin.parameters["optimization"]["test_gradient_seed"] = 0.1
 solver_parameters = {}

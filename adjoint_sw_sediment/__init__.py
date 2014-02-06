@@ -14,5 +14,5 @@ __maintainer__ = 'Samuel Parkinson'
 __email__ = 's.parkinson11@imperial.ac.uk'
 
 from model import Model
-from my_reduced_functional import MyReducedFunctional
+from my_reduced_functional import *
 import input_output
