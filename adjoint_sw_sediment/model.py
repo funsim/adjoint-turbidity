@@ -135,12 +135,12 @@ class Model():
         for i, override in enumerate(self.override_ic):
             a += inner(test[i], trial[i])*dx
             if override['override']:
-                try:
+                # try:
                     L += inner(test[i], ic_dict[override['id']])*dx
-                except:
-                    sys.exit('You have specified to override ic for ' + 
-                             override['id'] + ' but have not supplied a suitable function ' +
-                             'in the ic dictionary')
+                # except:
+                #     sys.exit('You have specified to override ic for ' + 
+                #              override['id'] + ' but have not supplied a suitable function ' +
+                #              'in the ic dictionary')
             else:
                 L += inner(test[i], self.w_ic_e[i])*dx
 

@@ -14,6 +14,7 @@ import pickle
 sys.setrecursionlimit(100000)
 
 set_log_level(ERROR)
+# dolfin.parameters["optimization"]["test_gradient"] = True
 
 def smooth_abs(val, min = 0.25):
   return (val**2.0 + min)**0.5

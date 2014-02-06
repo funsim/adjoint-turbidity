@@ -125,8 +125,9 @@ class MyReducedFunctional(ReducedFunctional):
         return j * self.scale
 
     def __call__(self, value, annotate = True):
+
         # some checks
-        if not isinstance(value, (list, tuple)):
+        if not isinstance(value, (list, tuple, np.ndarray)):
             value = [value]
         if len(value) != len(self.parameter):
             raise ValueError, "The number of parameters must equal the number of parameter values."
@@ -146,7 +147,7 @@ class MyReducedFunctional(ReducedFunctional):
 
         value = scaled_dfunc_value
 
-        print 'd0=', value[0]((0)), 'd1=', value[1]((0)), 'd2=', value[2]((0))
+        print 'd0=', value[0]((0)), 'd1=', value[1]((0))#, 'd2=', value[2]((0))
         # save gradient
         self.results['gradient'] = to_tuple(value)
 
@@ -164,6 +165,11 @@ def replace_ic_value(parameter, new_value):
     if hasattr(new_value, 'vector'):
         function = parameter.coeff
         function.assign(new_value)
+
+    # Case 2: The new_value is a float
+    if isinstance(new_value, np.float64):
+        function = parameter.coeff
+        function.assign(Constant(new_value))
 
     # # Case 2: The parameter value and new_value are Constants
     # elif hasattr(new_value, "value_size"): 

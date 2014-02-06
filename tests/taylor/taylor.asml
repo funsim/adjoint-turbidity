@@ -8,7 +8,7 @@
     <time_discretisation name="runge_kutta"/>
     <adaptive_timestep>
       <cfl_criteria>
-        <real_value rank="0">0.2</real_value>
+        <real_value rank="0">0.1</real_value>
       </cfl_criteria>
     </adaptive_timestep>
     <finish_time>
@@ -36,7 +36,7 @@
       </var>
       <var name="cfl">
         <code>
-          <string_value lines="20" type="code" language="python">model.adapt_cfl((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.adapt_cfl.vector().array()[0]</string_value>
         </code>
       </var>
     </variables>
