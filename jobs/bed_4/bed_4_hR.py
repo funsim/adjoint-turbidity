@@ -166,8 +166,14 @@ def create_functional(model):
   return inner(diff, diff)*dx
 
 def optimisation(values):
+
+  methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF" ]
+  method = methods[3]  
   
-  model, R = prep(values)
+  if method == 'BF':
+    model, R = prep(values, True)
+  else:
+    model, R = prep(values)
 
   parameters = [InitialConditionParameter(model.h_0), 
                 InitialConditionParameter(R)]
@@ -246,10 +252,7 @@ def optimisation(values):
 
   rf = MyReducedFunctional(model, functional, scaled_parameters, parameters, 
                            scale = 1e-1, prep_model_cb=prep_model_cb, 
-                           prep_target_cb=prep_target_cb)
-
-  methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF" ]
-  method = methods[3]        
+                           prep_target_cb=prep_target_cb)      
 
   if method in ("TNC", "IPOPT"):
     # solve forward model once
