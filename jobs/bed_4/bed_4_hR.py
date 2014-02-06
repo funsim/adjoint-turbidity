@@ -127,6 +127,7 @@ def create_functional(model):
 def optimisation(values):
 
   methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF" ]
+<<<<<<< HEAD
   method = methods[0]  
 
   model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
@@ -142,6 +143,13 @@ def optimisation(values):
     r = values[0]/values[1]
     model.norms = Constant(r), Constant(1)
     model.h_0.assign(Constant(values[0]/r))
+=======
+  method = methods[3]  
+  
+  if method == 'BF':
+    model, R = prep(values, True)
+    print [norm((0,0)) for norm in model.norms]
+>>>>>>> e7f92c5619e6081609ef6dd8a8f1d70b2e1582cc
   else:
     model.norms = Constant(1.0), Constant(1.0)
     model.h_0.assign(Constant(values[0]))
@@ -257,7 +265,8 @@ def optimisation(values):
 
   if method == "BF":
     from scipy.optimize import brute
-    rranges = ((bnds[0][0], bnds[1][0]), (bnds[0][0], bnds[1][0]))
+    rranges = ((bnds[0][0], bnds[1][0]), (bnds[0][1], bnds[1][1]))
+    print rranges
     resbrute = brute(rf, rranges, Ns = 20, full_output=True,
                      finish=None)    
     f = open('bf.pckl','w')
