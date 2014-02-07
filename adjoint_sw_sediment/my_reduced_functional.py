@@ -170,8 +170,8 @@ class MyReducedFunctional(ReducedFunctional):
           if self.auto_scale is None:
             dj = self.derivative(forget=False, project=False)
             dj = np.array([dj_.vector().array() for dj_ in dj])
-            r = np.array(memoizable_m)/dj
-            self.auto_scale = 0.1/r.max()
+            r = dj/np.array(memoizable_m)
+            self.auto_scale = 0.1/abs(r).max()
           else:
             j = self.auto_scale*j
 
@@ -192,7 +192,7 @@ class MyReducedFunctional(ReducedFunctional):
         
         if self.auto_scaling and self.auto_scale is not None:
           dj = self.auto_scale*np.array(dj)
-
+          
         dj_f = []
         for i, dj_ in enumerate(dj):
           dj_f.append(Function(self.parameter[i].coeff.function_space()))
