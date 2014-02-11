@@ -29,8 +29,8 @@ def end_criteria(model):
   F = phi*(x_N/x_N_start)*dx
   int_phi = assemble(F)
   # return int_phi < 0.99999
-  print model.t
-  return model.t > 0.03
+  # print model.t
+  return model.t > 0.005
 
 # raw data
 phi_d_x = np.array([100,2209.9255583127,6917.3697270472,10792.3076923077,16317.1215880893,20070.9677419355,24657.3200992556,29016.6253101737,32013.6476426799,35252.8535980149,37069.2307692308,39718.1141439206,44410.4218362283,50041.1910669975,54900,79310,82770.0576368876,86477.2622478386,89875.5331412104,97907.8097982709,105013.285302594,112180.547550432,118019.39481268,128461.354466859,132910])
@@ -52,12 +52,14 @@ def fit(n_coeff):
     coeff_C.append(Constant(c))
   return coeff_C
 
-ec_coeff = fit(2)
+ec_coeff = fit(2)  
+x_N_t = Constant(ec_coeff[0]((0,0))/ec_coeff[1]((0,0)))
+ec_coeff = [ec_coeff[0], Constant(-ec_coeff[0]((0,0)))]
 
 def plot_target():
   from matplotlib import pyplot as plt
 
-  l = 300000
+  l = 1.0
 
   mesh = IntervalMesh(20, 0.0, 1.0)
   fs = FunctionSpace(mesh, 'CG', 1)
@@ -80,7 +82,7 @@ def plot_target():
   solve(v*filt*dx - v*f*dx == 0, f)
 
   fd = Function(fs)
-  solve(v*smooth_pos(depth_fn,0.001)*dx - v*fd*dx == 0, fd)
+  solve(v*depth_fn*dx - v*fd*dx == 0, fd)
 
   # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
   #          input_output.map_function_to_array(d, mesh))
@@ -89,7 +91,7 @@ def plot_target():
   # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
   #          input_output.map_function_to_array(f, mesh))
 
-  plt.plot(phi_d_x, phi_d_y)
+  # plt.plot(phi_d_x, phi_d_y)
 
   # plt.plot(x, d_2)
   # plt.ylim(0,1.2)
@@ -97,7 +99,7 @@ def plot_target():
   plt.show()
   sys.exit()
 
-plot_target()
+# plot_target()
 
 def create_functional(model):
 
@@ -106,12 +108,12 @@ def create_functional(model):
   # generate target depth function
   depth_fn = 0
   for i, c in enumerate(ec_coeff):
-    depth_fn += c*pow(x_N*model.y*model.h_0*model.norms[0], i)
+    depth_fn += c*pow(model.y, i)
 
   # function for solving target and realised deposit
   v = TestFunction(model.V)
   model.phi_t = Function(model.V, name='phi_t')
-  model.phi_t_f = v*smooth_pos(depth_fn,min=0.001)*dx - v*model.phi_t*dx
+  model.phi_t_f = v*depth_fn*dx - v*model.phi_t*dx
   model.phi_r = Function(model.V, name='phi_r')
   model.phi_r_f = v*phi_d*model.h_0*model.norms[0]*dx - v*model.phi_r*dx
 
@@ -123,9 +125,10 @@ def create_functional(model):
   model.f_denom_f = v*model.phi_r**2*dx - v*model.f_denom*dx
 
   # functional
-  diff = ((model.f_nom/model.f_denom)*model.phi_r - model.phi_t)
-  model.fn = inner(diff, diff)
-  return inner(diff, diff)*dx
+  depth_diff = ((model.f_nom/model.f_denom)*model.phi_r - model.phi_t)
+  x_N_diff = Constant(1e-5)*(x_N*model.h_0 - x_N_t)
+  model.fn = inner(x_N_diff, x_N_diff)*inner(depth_diff, depth_diff)
+  return model.fn*dx
 
 def optimisation(values):
 
@@ -198,6 +201,8 @@ def optimisation(values):
       solve(v*model.fn*dx - v*J*dx == 0, J)
     J_int = assemble(J*dx)
     
+    print '***', J_int
+    
     y, q, h, phi, phi_d, x_N, u_N, k = input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     results = {'realised':input_output.map_function_to_array(model.phi_r, model.mesh)*phi_0, 
                'target':input_output.map_function_to_array(model.phi_t, model.mesh), 
@@ -227,8 +232,7 @@ def optimisation(values):
 
   # functional
   J = create_functional(model)
-  J_scale = project(Constant(1.0), model.R)
-  functional = Functional(J_scale*J*dt[FINISH_TIME])
+  functional = Functional(J*dt[FINISH_TIME])
 
   s = []# ScaledParameter(J_scale, 1.0, J, timeforms.FINISH_TIME) ]
   
@@ -245,18 +249,11 @@ def optimisation(values):
 
   if method in ("TT"):
     rf.auto_scaling = False
-    # helpers.test_gradient_array(rf.compute_functional_mem, 
-    #                             rf.compute_gradient_mem,
-    #                             np.array(values))
-
-    j = rf([p.coeff for p in parameters])
-    dJdR = compute_gradient(functional, InitialConditionParameter(ratio), forget=False)
-
-    def Jhat(ratio):
-      return rf([model.h_0, ratio])
-
-    set_log_level(PROGRESS)
-    conv_rate = taylor_test(Jhat, InitialConditionParameter(ratio), j, dJdR, value=ratio, seed=1e-1)
+    helpers.test_gradient_array(rf.compute_functional_mem, 
+                                rf.compute_gradient_mem,
+                                np.array(values),
+                                perturbation_direction=np.array([0,1]),
+                                seed = 1e-2)
 
   if method == "IPOPT":
     rfn = ReducedFunctionalNumPy(rf)

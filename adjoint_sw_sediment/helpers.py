@@ -20,6 +20,10 @@ def test_gradient_array(J, dJ, x, seed=0.01, perturbation_direction=None, plot_f
     # First run the problem unperturbed
     j_direct = J(x)
 
+    # obtain gradient
+    dj = dJ(x, forget=True)
+    print 'gradient at point', dj
+
     # Randomise the perturbation direction:
     if perturbation_direction is None:
         perturbation_direction = x.copy()
@@ -43,12 +47,7 @@ def test_gradient_array(J, dJ, x, seed=0.01, perturbation_direction=None, plot_f
     # First-order Taylor remainders (not using adjoint)
     no_gradient = [abs(perturbed_j - j_direct) for perturbed_j in functional_values]
 
-    dj = dJ(x, forget=True)
-
-    # print perturbations, dj
-    # print functional_values, j_direct
-
-    info_green("dJ using gradient: %s" % str(list(dot(perturbations, dj))))
+    info_green("dJ using gradient: %s" % str([d[0] for d in dot(perturbations, dj)]))
     info_green("actual dJ        : %s" % str([(perturbed_j - j_direct) for perturbed_j in functional_values]))
     # info_green("Absolute functional evaluation differences: %s" % str(no_gradient))
     info_green("Convergence orders for Taylor remainder without adjoint information (should all be 1): %s" % str(convergence_order(no_gradient)))

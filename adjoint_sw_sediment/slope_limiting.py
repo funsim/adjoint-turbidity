@@ -150,7 +150,7 @@ class SlopeRHS(libadjoint.RHS):
         n_dof = ele_dof * n_ele
         G = sp.lil_matrix((len(c_arr), len(c_arr)))
 
-        for i_eq in range(6):
+        for i_eq in range(W.num_sub_spaces()):
 
             if i_eq < 4:
 

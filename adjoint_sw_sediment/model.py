@@ -124,7 +124,7 @@ class Model():
         # to store ic
         self.w['ic'] = Function(self.W, name='U_ic')
 
-    def set_ic(self, ic_dict = None):
+    def set_ic(self):
 
         # set time to initial t
         self.t = self.start_time
@@ -140,12 +140,7 @@ class Model():
         for i, override in enumerate(self.override_ic):
             a += inner(test[i], trial[i])*dx
             if override['override']:
-                # try:
-                    L += inner(test[i], ic_dict[override['id']])*dx
-                # except:
-                #     sys.exit('You have specified to override ic for ' + 
-                #              override['id'] + ' but have not supplied a suitable function ' +
-                #              'in the ic dictionary')
+                L += inner(test[i], override['function'])*dx
             else:
                 L += inner(test[i], self.w_ic_e[i])*dx
 
@@ -209,7 +204,10 @@ class Model():
         # NOSE LOCATION
         v = TestFunctions(self.W)[4]
         if self.mms:
-            F_x_N = v*(x_N[0] - x_N[1])*dx 
+            if self.time_discretise.func_name == 'runge_kutta':
+              F_x_N = v*(x_N['int'] - x_N['td'])*dx
+            else:
+              F_x_N = v*(x_N[0] - x_N[1])*dx 
         else:
             if self.time_discretise.func_name == 'runge_kutta':
                 F_x_N = v*(x_N['int'] - x_N['td'])*dx - v*u_N['td']*k['td']*dx 
@@ -252,7 +250,8 @@ class Model():
         self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
 
         bcq = DirichletBC(self.W.sub(0), '0.0', self.l_bc, method="pointwise")
-        self.bc = [bcq]
+        bcphi_d = DirichletBC(self.W.sub(3), '0.0', self.r_bc, method="pointwise")
+        self.bc = [bcq, bcphi_d]
 
     def solve(self, annotate = True):
         
@@ -294,6 +293,9 @@ class Model():
                 self.w['td'].assign(self.w['int'])
                 solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
 
+                if self.slope_limit:
+                    slope_limit(self.w['int'], annotate=annotate)
+
                 solve(self.F == 0, self.w[0], J=self.J, bcs=self.bc)
 
                 if self.slope_limit:
@@ -306,10 +308,11 @@ class Model():
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)
 
-            self.w[1].assign(self.w[0])
-
-            timestep = (self.w[0].vector().array())[self.W.sub(6).dofmap().cell_dofs(0)[0]]
+            timestep = ((self.w[0].vector().array())[self.W.sub(6).dofmap().cell_dofs(0)[0]] + 
+                        (self.w[0].vector().array())[self.W.sub(6).dofmap().cell_dofs(0)[0]])/2.0
             self.t += timestep
+
+            self.w[1].assign(self.w[0])
 
             # display results
             if self.plot:

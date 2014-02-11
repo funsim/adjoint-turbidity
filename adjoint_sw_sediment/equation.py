@@ -98,8 +98,11 @@ class Equation():
             if model.mms:
                 self.F += x_N_td*v*model.S[index]*k_td*dx
             if source:
-                self.F += k_td*x_N_td*v*source*dx
+                self.F += v*k_td*x_N_td*source*dx
 
         else:
             # identity
-            self.F = v*(u[0] - u[1])*dx
+            if model.time_discretise.func_name == 'runge_kutta':
+              self.F = v*(u['int'] - u['td'])*dx
+            else:
+              self.F = v*(u[0] - u[1])*dx
