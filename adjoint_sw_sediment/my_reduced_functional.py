@@ -48,7 +48,7 @@ class MyReducedFunctional(ReducedFunctional):
         self.auto_scaling = autoscale
         self.auto_scale = None
 
-        def compute_functional(m, annotate):
+        def compute_functional(m, annotate = True):
             '''run forward model and compute functional'''
 
             # store ic
@@ -121,7 +121,6 @@ class MyReducedFunctional(ReducedFunctional):
             j += assemble(f)
 
             self.results['j'] = j
-            info_green('Functional value: %f'%j)
 
             self.first_run = False
             return j * self.scale
@@ -157,6 +156,7 @@ class MyReducedFunctional(ReducedFunctional):
 
         memoizable_m = [val.vector().array() for val in m]
         self.last_m = memoizable_m
+        info_green('Input values: %e, %e', memoizable_m[0], memoizable_m[1])
         
         info_blue('Start evaluation of j')
         timer = dolfin.Timer("j evaluation") 
@@ -168,12 +168,15 @@ class MyReducedFunctional(ReducedFunctional):
 
         if self.auto_scaling:
           if self.auto_scale is None:
-            dj = self.derivative(forget=False, project=False)
+            dj = self.derivative(forget=True, project=False)
             dj = np.array([dj_.vector().array() for dj_ in dj])
             r = dj/np.array(memoizable_m)
             self.auto_scale = 0.1/abs(r).max()
+            j = self.auto_scale*j
           else:
             j = self.auto_scale*j
+
+        info_green('Functional value: %e'%j)
 
         return j
 
@@ -183,7 +186,7 @@ class MyReducedFunctional(ReducedFunctional):
         info_green('Start evaluation of dj')
         timer = dolfin.Timer("dj evaluation") 
 
-        dj = self.compute_gradient_mem(self.last_m, forget, project)
+        dj = np.array(self.compute_gradient_mem(self.last_m, forget, project))
 
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
@@ -191,14 +194,15 @@ class MyReducedFunctional(ReducedFunctional):
         self.save_checkpoint("checkpoint")
         
         if self.auto_scaling and self.auto_scale is not None:
-          dj = self.auto_scale*np.array(dj)
+          print 'scaling'
+          dj = self.auto_scale*dj
           
         dj_f = []
         for i, dj_ in enumerate(dj):
           dj_f.append(Function(self.parameter[i].coeff.function_space()))
           dj_f[-1].vector()[:] = dj_
 
-        print 'd0=', dj[0], 'd1=', dj[1]
+        info_green('Gradients: %e, %e', dj[0], dj[1])
         # save gradient
         self.results['gradient'] = to_tuple(dj)
 
@@ -211,7 +215,6 @@ class MyReducedFunctional(ReducedFunctional):
 
 def replace_ic_value(parameter, new_value):
     ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
-
     # Case 1: The parameter value and new_value are Functions
     if hasattr(new_value, 'vector'):
         function = parameter.coeff
@@ -225,7 +228,7 @@ def replace_ic_value(parameter, new_value):
         function.assign(f)
 
     # Case 2: The new_value is a float
-    elif isinstance(new_value, np.float64):
+    elif isinstance(new_value, (np.float64, float, int)):
         function = parameter.coeff
         function.assign(Constant(new_value))
 

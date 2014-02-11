@@ -49,12 +49,12 @@ class Equation():
 
         # upwind/downwind grad term
         if grad_term:
-            if model.disc == "DG":
-                grad_n_up = smooth_pos(grad_term*model.n)
-                grad_n_down = smooth_neg(grad_term*model.n)
-            else:
-                grad_n_up = grad_term*model.n
-                grad_n_down = grad_term*model.n
+          grad_n_up = smooth_pos(grad_term*model.n)
+          grad_n_down = smooth_neg(grad_term*model.n)
+          if model.disc == "DG":
+            grad_n = grad_n_down
+          else:
+            grad_n = model.n
 
         # store weak boundary value
         self.weak_b = weak_b
@@ -91,6 +91,7 @@ class Equation():
                 self.F -= k_td*grad(v)[0]*grad_term*dx
                 self.F += k_td*v*grad_term*model.n*(model.ds(0) + model.ds(1))
                 self.F += avg(k_td)*jump(v)*avg(grad_term)*model.n('+')*dS
+                # self.F += k_td*v*grad_n*(model.ds(0) + model.ds(1))
                 # self.F += avg(k_td)*jump(v)*(grad_n_up('+') - grad_n_up('-'))*dS
 
             # source terms

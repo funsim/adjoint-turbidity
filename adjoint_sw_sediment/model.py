@@ -87,12 +87,17 @@ class Model():
         self.n = FacetNormal(self.mesh)[0]
         self.dX = Constant(1.0/self.ele_count)
 
-        # left boundary marked as 0, right as 1
         class LeftBoundary(SubDomain):
             def inside(self, x, on_boundary):
                 return x[0] < DOLFIN_EPS
         left_boundary = LeftBoundary()
         self.l_bc = left_boundary
+        class RightBoundary(SubDomain):
+            def inside(self, x, on_boundary):
+                return 1.0 - x[0] < DOLFIN_EPS
+        right_boundary = RightBoundary()
+        self.r_bc = right_boundary
+
         exterior_facet_domains = FacetFunction("uint", self.mesh)
         exterior_facet_domains.set_all(1)
         left_boundary.mark(exterior_facet_domains, 0)
@@ -246,7 +251,8 @@ class Model():
         # compute directional derivative about u in the direction of du (Jacobian)
         self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
 
-        self.bcq = [DirichletBC(self.W.sub(0), '0.0', self.l_bc, method="pointwise")]
+        bcq = DirichletBC(self.W.sub(0), '0.0', self.l_bc, method="pointwise")
+        self.bc = [bcq]
 
     def solve(self, annotate = True):
         
@@ -280,22 +286,22 @@ class Model():
 
                 # runge kutta (2nd order)
                 self.w['td'].assign(self.w[1])
-                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bcq)
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bcq)
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
 
-                solve(self.F == 0, self.w[0], J=self.J, bcs=self.bcq)
+                solve(self.F == 0, self.w[0], J=self.J, bcs=self.bc)
 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)
 
             else:
 
-                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters, bcs=self.bcq)
+                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters, bcs=self.bc)
                 
                 if self.slope_limit:
                     slope_limit(self.w[0], annotate=annotate)
@@ -303,7 +309,6 @@ class Model():
             self.w[1].assign(self.w[0])
 
             timestep = (self.w[0].vector().array())[self.W.sub(6).dofmap().cell_dofs(0)[0]]
-
             self.t += timestep
 
             # display results

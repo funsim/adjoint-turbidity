@@ -12,7 +12,6 @@ import sys
 import pickle
 # hack!!
 sys.setrecursionlimit(100000)
-dolfin.parameters["optimization"]["test_gradient"] = False
 
 set_log_level(ERROR)
 
@@ -29,7 +28,9 @@ def end_criteria(model):
 
   F = phi*(x_N/x_N_start)*dx
   int_phi = assemble(F)
-  return int_phi < 0.1
+  # return int_phi < 0.99999
+  print model.t
+  return model.t > 0.03
 
 # raw data
 phi_d_x = np.array([100,2209.9255583127,6917.3697270472,10792.3076923077,16317.1215880893,20070.9677419355,24657.3200992556,29016.6253101737,32013.6476426799,35252.8535980149,37069.2307692308,39718.1141439206,44410.4218362283,50041.1910669975,54900,79310,82770.0576368876,86477.2622478386,89875.5331412104,97907.8097982709,105013.285302594,112180.547550432,118019.39481268,128461.354466859,132910])
@@ -63,7 +64,7 @@ def plot_target():
   y = project(Expression('x[0]'), fs)
   depth_fn = 0
   for i, c in enumerate(ec_coeff):
-    depth_fn += c*pow(l*y, i)
+    depth_fn += c*(l*y)**i
   d = Function(fs)
   v = TestFunction(fs)
   solve(v*depth_fn*dx - v*d*dx == 0, d)
@@ -96,6 +97,8 @@ def plot_target():
   plt.show()
   sys.exit()
 
+plot_target()
+
 def create_functional(model):
 
   (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
@@ -126,8 +129,8 @@ def create_functional(model):
 
 def optimisation(values):
 
-  methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF" ]
-  method = methods[0]  
+  methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF", "OS", "TT" ]
+  method = methods[-1]  
 
   model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
 
@@ -136,7 +139,7 @@ def optimisation(values):
   load_options.post_init(model, model.xml_path)
 
   # define parameters   
-  R = project(Constant(values[1]), model.R, name='R')
+  ratio = project(Constant(values[1]), model.R, name='ratio')
   if method in ["L-BFGS-B", "IPOPT"]:
     # values should be scaled to be similar
     r = values[0]/values[1]
@@ -149,7 +152,7 @@ def optimisation(values):
   # dummy solves to kick off
   v = TestFunction(model.R)
   dummy = Function(model.R)
-  solve(v*R*dx - v*dummy*dx == 0, dummy)
+  solve(v*ratio*dx - v*dummy*dx == 0, dummy)
   solve(v*model.h_0*dx - v*dummy*dx == 0, dummy)
 
   # define beta as form
@@ -163,9 +166,9 @@ def optimisation(values):
   # model ic overrides
   for override in model.override_ic:
     if override['id'] == 'initial_length':
-      override['function'] = R*model.norms[1]
+      override['function'] = ratio*model.norms[1]
     if override['id'] == 'timestep':
-      override['function'] = model.dX*R*model.norms[1]/model.Fr*model.adapt_cfl
+      override['function'] = model.dX*ratio*model.norms[1]/model.Fr*model.adapt_cfl
 
   def prep_model_cb(model, value = None):
     if value is not None:
@@ -176,8 +179,8 @@ def optimisation(values):
         a = value[0]
         b = value[1]
 
-      print 'raw:    h=', a, ' R=', b
-      print 'scaled: h=', a*model.norms[0]((0,0)), ' R=', b*model.norms[1]((0,0))
+      print 'raw:    h=', a, ' ratio=', b
+      print 'scaled: h=', a*model.norms[0]((0,0)), ' ratio=', b*model.norms[1]((0,0))
 
   model.out_id = 0
   def prep_target_cb(model):
@@ -211,7 +214,7 @@ def optimisation(values):
     model.out_id += 1
 
   parameters = [InitialConditionParameter(model.h_0), 
-                InitialConditionParameter(R)]
+                InitialConditionParameter(ratio)]
 
   bnds =   (
       ( 
@@ -224,18 +227,36 @@ def optimisation(values):
 
   # functional
   J = create_functional(model)
-  J_scale = Function(model.R)
+  J_scale = project(Constant(1.0), model.R)
   functional = Functional(J_scale*J*dt[FINISH_TIME])
 
-  s = [ ScaledParameter(J_scale, 1.0, J, timeforms.FINISH_TIME) ]
+  s = []# ScaledParameter(J_scale, 1.0, J, timeforms.FINISH_TIME) ]
   
   rf = MyReducedFunctional(model, functional, parameters, scaled_parameters = s,
                            scale = 1.0, prep_model_cb=prep_model_cb, 
                            prep_target_cb=prep_target_cb, autoscale = True)  
 
   # run forward model first for some optimisation routines
-  if method in ("IPOPT", "TNC"):
-    rf([p.coeff for p in parameters])
+  if method in ("IPOPT", "TNC", "OS"):
+    rf.auto_scaling = False
+    j = rf([p.coeff for p in parameters])
+    if method == "OS":
+      print j
+
+  if method in ("TT"):
+    rf.auto_scaling = False
+    # helpers.test_gradient_array(rf.compute_functional_mem, 
+    #                             rf.compute_gradient_mem,
+    #                             np.array(values))
+
+    j = rf([p.coeff for p in parameters])
+    dJdR = compute_gradient(functional, InitialConditionParameter(ratio), forget=False)
+
+    def Jhat(ratio):
+      return rf([model.h_0, ratio])
+
+    set_log_level(PROGRESS)
+    conv_rate = taylor_test(Jhat, InitialConditionParameter(ratio), j, dJdR, value=ratio, seed=1e-1)
 
   if method == "IPOPT":
     rfn = ReducedFunctionalNumPy(rf)

@@ -251,7 +251,7 @@ def optimisation(values):
 
   # functional
   int_0 = create_functional(model)
-  int_0_scale = Function(model.R)
+  int_0_scale = project(Constant(1.0), model.R)
   functional = Functional(int_0_scale*int_0*dt[FINISH_TIME])
 
   class scaled_parameter():
@@ -262,9 +262,9 @@ def optimisation(values):
       self.time = time
 
   scaled_parameters = [
-    scaled_parameter(int_0_scale, 1e0, 
-                     int_0, 
-                     timeforms.FINISH_TIME)
+    # scaled_parameter(int_0_scale, 1e9, 
+    #                  int_0, 
+    #                  timeforms.FINISH_TIME)
     ]
 
   model.ec_coeff = ec_coeff

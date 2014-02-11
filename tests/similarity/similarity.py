@@ -10,30 +10,10 @@ import numpy as np
 import sys
 
 def getError(model):
-    V = FunctionSpace(model.mesh, model.disc, model.degree + 2)
 
-    K = ((27.0*model.Fr((0,0))**2.0)/(12.0 - 2.0*model.Fr((0,0))**2.0))**(1./3.)
-
-    S_q   = project(Expression(model.w_ic_e_cstr[0], 
-                               K = K, Fr = model.Fr((0,0)), t = model.t, 
-                               dX = model.dX((0,0)), cfl = model.adapt_cfl((0,0)),
-                               degree=5), V)
-    S_h   = project(Expression(model.w_ic_e_cstr[1],  
-                               K = K, Fr = model.Fr((0,0)), t = model.t, 
-                               dX = model.dX((0,0)), cfl = model.adapt_cfl((0,0)),
-                               degree=5), V)
-    S_phi = project(Expression(model.w_ic_e_cstr[2], 
-                               K = K, Fr = model.Fr((0,0)), t = model.t, 
-                               dX = model.dX((0,0)), cfl = model.adapt_cfl((0,0)),
-                               degree=5), V)
-    S_x_N = project(Expression(model.w_ic_e_cstr[4], 
-                               K = K, Fr = model.Fr((0,0)), t = model.t, 
-                               dX = model.dX((0,0)), cfl = model.adapt_cfl((0,0)),
-                               degree=5), model.R)
-    S_u_N = project(Expression(model.w_ic_e_cstr[5], 
-                               K = K, Fr = model.Fr((0,0)), t = model.t, 
-                               dX = model.dX((0,0)), cfl = model.adapt_cfl((0,0)),
-                               degree=5), model.R)
+    model.w_ic_e.t = model.t
+    w_test = project(model.w_ic_e, model.W)
+    S_q, S_h, S_phi, S_phi_d, S_x_N, S_u_N, S_k = w_test.split()
     
     q, h, phi, phi_d, x_N, u_N, k = model.w[0].split()
     E_q = errornorm(q, S_q, norm_type="L2", degree_rise=2)
