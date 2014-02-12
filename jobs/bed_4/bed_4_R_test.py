@@ -22,13 +22,6 @@ model.x_N_ic = Function(model.R, name='x_N_ic')
 
 # model ic overrides
 for override in model.override_ic:
-  if override['FS'] == 'CG':
-    fs = FunctionSpace(model.mesh, 'CG', 1)
-  else:
-    fs = FunctionSpace(model.mesh, 'R', 0)
-  override['function'] = Function(fs, name='ic_' + override['id'])
-  override['test'] = TestFunction(fs)
-
   if override['id'] == 'initial_length':
     override['form'] = model.x_N_ic
   if override['id'] == 'timestep':
@@ -43,15 +36,7 @@ model.fn = inner(phi_d, phi_d)*dx
 functional = Functional(model.fn*dt[FINISH_TIME])
 
 def forward(ic):
-  model.x_N_ic.assign(Constant(ic[0]))
-
-  ic_dict = {}       
-  for override in model.override_ic:
-      if override['override']:
-          solve(override['test']*override['form']*dx - 
-                override['test']*override['function']*dx == 0, 
-                override['function'])          
-
+  model.x_N_ic.assign(Constant(ic[0]))      
   model.set_ic()
   model.solve()
 

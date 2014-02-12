@@ -71,24 +71,8 @@ class MyReducedFunctional(ReducedFunctional):
             if self.prep_model_cb is not None:
                 self.prep_model_cb(self.model, m)
 
-            # create ic_dict for model
-            ic_dict = {}       
-            for override in self.model.override_ic:
-                if override['override']:
-                    if override['FS'] == 'CG':
-                        fs = FunctionSpace(self.model.mesh, 'CG', 1)
-                    else:
-                        fs = FunctionSpace(self.model.mesh, 'R', 0)
-
-                    v = TestFunction(fs)
-                    u = TrialFunction(fs)
-                    a = v*u*dx
-                    L = v*override['function']*dx
-                    ic_dict[override['id']] = Function(fs, name='ic_' + override['id'])
-                    solve(a==L, ic_dict[override['id']])
-
             # set model ic
-            self.model.set_ic(ic_dict = ic_dict)
+            self.model.set_ic()
 
             # calculate functional value for ic
             f = 0

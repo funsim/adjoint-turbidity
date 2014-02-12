@@ -140,6 +140,9 @@ class Model():
         for i, override in enumerate(self.override_ic):
             a += inner(test[i], trial[i])*dx
             if override['override']:
+                solve(override['test_function']*override['form']*dx - 
+                      override['test_function']*override['function']*dx == 0, 
+                      override['function']) 
                 L += inner(test[i], override['function'])*dx
             else:
                 L += inner(test[i], self.w_ic_e[i])*dx

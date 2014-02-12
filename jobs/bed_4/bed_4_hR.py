@@ -28,9 +28,9 @@ def end_criteria(model):
 
   F = phi*(x_N/x_N_start)*dx
   int_phi = assemble(F)
-  # return int_phi < 0.99999
+  return int_phi < 0.8
   # print model.t
-  return model.t > 0.005
+  return model.t > 1.0 #0.0139
 
 # raw data
 phi_d_x = np.array([100,2209.9255583127,6917.3697270472,10792.3076923077,16317.1215880893,20070.9677419355,24657.3200992556,29016.6253101737,32013.6476426799,35252.8535980149,37069.2307692308,39718.1141439206,44410.4218362283,50041.1910669975,54900,79310,82770.0576368876,86477.2622478386,89875.5331412104,97907.8097982709,105013.285302594,112180.547550432,118019.39481268,128461.354466859,132910])
@@ -52,7 +52,7 @@ def fit(n_coeff):
     coeff_C.append(Constant(c))
   return coeff_C
 
-ec_coeff = fit(2)  
+ec_coeff = np.array(fit(2))
 x_N_t = Constant(ec_coeff[0]((0,0))/ec_coeff[1]((0,0)))
 ec_coeff = [ec_coeff[0], Constant(-ec_coeff[0]((0,0)))]
 
@@ -128,6 +128,9 @@ def create_functional(model):
   depth_diff = ((model.f_nom/model.f_denom)*model.phi_r - model.phi_t)
   x_N_diff = Constant(1e-5)*(x_N*model.h_0 - x_N_t)
   model.fn = inner(x_N_diff, x_N_diff)*inner(depth_diff, depth_diff)
+  model.fn = inner(depth_diff, depth_diff)
+  # model.fn = inner(model.f_nom/model.f_denom, model.f_denom/model.f_denom)
+  model.fn = inner(phi_d, phi_d)
   return model.fn*dx
 
 def optimisation(values):
@@ -142,20 +145,20 @@ def optimisation(values):
   load_options.post_init(model, model.xml_path)
 
   # define parameters   
-  ratio = project(Constant(values[1]), model.R, name='ratio')
-  if method in ["L-BFGS-B", "IPOPT"]:
+  if method in ["L-BFGS-B", "IPOPT", "TT"]:
     # values should be scaled to be similar
-    r = values[0]/values[1]
-    model.norms = Constant(r), Constant(1)
-    model.h_0.assign(Constant(values[0]/r))
+    model.norms = Constant(values[0]), Constant(values[1])
+    values = [1.0, 1.0]
   else:
     model.norms = Constant(1.0), Constant(1.0)
-    model.h_0.assign(Constant(values[0]))
+    values = values
+  x_N_ic = project(Constant(values[1]), model.R, name='x_N_ic')
+  model.h_0.assign(Constant(values[0]))
 
   # dummy solves to kick off
   v = TestFunction(model.R)
   dummy = Function(model.R)
-  solve(v*ratio*dx - v*dummy*dx == 0, dummy)
+  solve(v*x_N_ic*dx - v*dummy*dx == 0, dummy)
   solve(v*model.h_0*dx - v*dummy*dx == 0, dummy)
 
   # define beta as form
@@ -169,9 +172,9 @@ def optimisation(values):
   # model ic overrides
   for override in model.override_ic:
     if override['id'] == 'initial_length':
-      override['function'] = ratio*model.norms[1]
+      override['form'] = x_N_ic*model.norms[1]
     if override['id'] == 'timestep':
-      override['function'] = model.dX*ratio*model.norms[1]/model.Fr*model.adapt_cfl
+      override['form'] = model.dX*x_N_ic*model.norms[1]/model.Fr*model.adapt_cfl
 
   def prep_model_cb(model, value = None):
     if value is not None:
@@ -182,8 +185,8 @@ def optimisation(values):
         a = value[0]
         b = value[1]
 
-      print 'raw:    h=', a, ' ratio=', b
-      print 'scaled: h=', a*model.norms[0]((0,0)), ' ratio=', b*model.norms[1]((0,0))
+      print 'raw:    h=', a, ' x_N_ic=', b
+      print 'scaled: h=', a*model.norms[0]((0,0)), ' x_N_ic=', b*model.norms[1]((0,0))
 
   model.out_id = 0
   def prep_target_cb(model):
@@ -219,7 +222,7 @@ def optimisation(values):
     model.out_id += 1
 
   parameters = [InitialConditionParameter(model.h_0), 
-                InitialConditionParameter(ratio)]
+                InitialConditionParameter(x_N_ic)]
 
   bnds =   (
       ( 
@@ -252,7 +255,7 @@ def optimisation(values):
     helpers.test_gradient_array(rf.compute_functional_mem, 
                                 rf.compute_gradient_mem,
                                 np.array(values),
-                                perturbation_direction=np.array([0,1]),
+                                perturbation_direction=np.array([1,0]),
                                 seed = 1e-2)
 
   if method == "IPOPT":
