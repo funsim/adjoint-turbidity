@@ -128,83 +128,48 @@ characters in the project name should be avoided.</a:documentation>
           <element name="height">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial height of the current, default=1.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
           <element name="momentum">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial momentum of the current, default=0.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
           <element name="volume_fraction">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial volume fraction of the current, default=1.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
           <element name="deposit_depth">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial deposited sediment, default=0.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
           <element name="initial_length">
             <a:documentation>The non-dimensionalised initial length of the current, default=1.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
           <element name="front_velocity">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
-the initial frontal velocity, default=0.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+the initial frontal velocity, default=1.19</a:documentation>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
           <element name="timestep">
             <a:documentation>C code, or python that returns C code as a string, for expression describing 
 the initial timestep, default=1.0</a:documentation>
-            <ref name="c_string_choice"/>
-            <optional>
-              <element name="override">
-                <empty/>
-              </element>
-            </optional>
+            <ref name="ic_choice"/>
           </element>
         </optional>
         <optional>
@@ -230,6 +195,28 @@ the initial timestep, default=1.0</a:documentation>
       </optional>
     </element>
   </start>
+  <define name="ic_choice">
+    <choice>
+      <element name="c_string">
+        <ref name="anystring"/>
+      </element>
+      <element name="form">
+        <ref name="python_code"/>
+        <optional>
+          <element name="additional_form_var">
+            <oneOrMore>
+              <element name="var">
+                <attribute name="name">
+                  <data type="string"/>
+                </attribute>
+                <ref name="python_code"/>
+              </element>
+            </oneOrMore>
+          </element>
+        </optional>
+      </element>
+    </choice>
+  </define>
   <define name="c_string_choice">
     <choice>
       <element name="c_string">
