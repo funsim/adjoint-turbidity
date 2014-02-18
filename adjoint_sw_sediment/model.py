@@ -119,10 +119,8 @@ class Model():
         self.w[0] = Function(self.W, name='U')
         self.w[1] = Function(self.W, name='U_1')
         # only used in runge kutta
-        # self.w['int'] = Function(self.W, name='U_int')
-        self.w['int'] = TrialFunction(self.W)
+        self.w['int'] = Function(self.W, name='U_int')
         self.w['td'] = Function(self.W, name='U_td')
-        self.w['linear'] = Function(self.W, name='U_lin')
         # to store ic
         self.w['ic'] = Function(self.W, name='U_ic')
 
@@ -154,10 +152,8 @@ class Model():
 
         solve(F == 0, self.w[0])
         self.w[1].assign(self.w[0])
-        self.w['int'] = Function(self.W, name='U_int')
         self.w['int'].assign(self.w[0])
         self.w['td'].assign(self.w[0])
-        self.w['linear'].assign(self.w[0])
         self.w['ic'].assign(self.w[0])
 
     def generate_form(self): 
@@ -174,7 +170,6 @@ class Model():
         q[0], h[0], phi[0], phi_d[0], x_N[0], u_N[0], k[0], phi_int[0] = split(self.w[0])
         q[1], h[1], phi[1], phi_d[1], x_N[1], u_N[1], k[1], phi_int[1] = split(self.w[1])
         q['int'], h['int'], phi['int'], phi_d['int'], x_N['int'], u_N['int'], k['int'], phi_int['int'] = split(self.w['int'])
-        q['linear'], h['linear'], phi['linear'], phi_d['linear'], x_N['linear'], u_N['linear'], k['linear'], phi_int['linear'] = split(self.w['linear'])
         self.w['split_td'] = self.time_discretise(self.w)
         q['td'], h['td'], phi['td'], phi_d['td'], x_N['td'], u_N['td'], k['td'], phi_int['td'] = self.w['split_td']
 
@@ -229,7 +224,7 @@ class Model():
         # NOSE SPEED
         v = TestFunctions(self.W)[5]
         if self.time_discretise.func_name == 'runge_kutta':
-            F_u_N = v*u_N['int']*self.ds(1) - v*(self.Fr*(phi['linear'])**0.5)*self.ds(1) 
+            F_u_N = v*u_N['int']*self.ds(1) - v*(self.Fr*(phi['int'])**0.5)*self.ds(1) 
         else:
             F_u_N = v*u_N[0]*self.ds(1) - v*(self.Fr*(phi[0])**0.5)*self.ds(1) 
 
@@ -238,7 +233,7 @@ class Model():
         v = TestFunction(self.W)[6]
         if self.adapt_timestep:
             if self.time_discretise.func_name == 'runge_kutta':
-                F_k = v*k['int']*dx - v*x_N['linear']*self.dX/u_N['linear']*self.adapt_cfl*dx
+                F_k = v*k['int']*dx - v*x_N['int']*self.dX/u_N['int']*self.adapt_cfl*dx
             else:
                 F_k = v*k[0]*dx - v*x_N[0]*self.dX/u_N[0]*self.adapt_cfl*dx
         else:
@@ -259,18 +254,13 @@ class Model():
 
         if self.time_discretise.func_name == 'runge_kutta':
             self.F_rk = self.F
-            self.lhs_rk, self.rhs_rk = lhs(self.F_rk), rhs(self.F_rk)
-            # self.J_rk = derivative(self.F_rk, self.w['int'], TrialFunction(self.W))
-            self.LHS_RK = assemble(self.lhs_rk)
+            self.J_rk = derivative(self.F_rk, self.w['int'], TrialFunction(self.W))
             
             v = TestFunction(self.W)
-            # self.F = inner(v, (self.w[0] - 0.5*self.w[1] - 0.5*self.w['int']))*dx
-            self.F = inner(v, (self.w['int'] - 0.5*self.w[1] - 0.5*self.w['td']))*dx
-            self.lhs, self.rhs = lhs(self.F), rhs(self.F)
-            self.LHS = assemble(self.lhs)
+            self.F = inner(v, (self.w[0] - 0.5*self.w[1] - 0.5*self.w['int']))*dx
         
-        # # compute directional derivative about u in the direction of du (Jacobian)
-        # self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
+        # compute directional derivative about u in the direction of du (Jacobian)
+        self.J = derivative(self.F, self.w[0], TrialFunction(self.W))
 
         bcq = DirichletBC(self.W.sub(0), '0.0', self.l_bc, method="pointwise")
         bcphi_d = DirichletBC(self.W.sub(3), '0.0', self.r_bc, method="pointwise")
@@ -306,41 +296,22 @@ class Model():
 
             # runge kutta (2nd order)
             if self.time_discretise.func_name == 'runge_kutta':
-                nl_it = 2
 
                 # runge kutta (2nd order)
                 self.w['int'].assign(self.w[1])
 
                 self.w['td'].assign(self.w[1])
-                for it in range(nl_it):
-                  self.w['linear'].assign(self.w['int'])
-                  # solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
-                  solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
-                  # b = assemble(self.rhs_rk, cache=True)
-                  # for bc in self.bc: bc.apply(self.LHS_RK, b)
-                  # solve(self.LHS_RK, self.w['int'].vector(), b)
-
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                for it in range(nl_it):
-                  self.w['linear'].assign(self.w['int'])
-                  # solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
-                  solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
-                  # b = assemble(self.rhs_rk, cache=True)
-                  # for bc in self.bc: bc.apply(self.LHS_RK, b)
-                  # solve(self.LHS_RK, self.w['int'].vector(), b)
-
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                # solve(self.F == 0, self.w[0], J=self.J, bcs=self.bc)
-                solve(self.lhs == self.rhs, self.w[0], bcs=self.bc)
-                # b = assemble(self.rhs, cache=True)
-                # for bc in self.bc: bc.apply(self.LHS, b)
-                # solve(self.LHS, self.w[0].vector(), b)
+                solve(self.F == 0, self.w[0], J=self.J, bcs=self.bc)
 
             else:
 
