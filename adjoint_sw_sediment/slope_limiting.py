@@ -132,6 +132,9 @@ class SlopeRHS(libadjoint.RHS):
 
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
 
+        if contraction_vector.data is None:
+          return adjlinalg.Vector(None)
+
         f = Function(values[0].data)
         W = f.function_space()
         mesh = W.mesh()

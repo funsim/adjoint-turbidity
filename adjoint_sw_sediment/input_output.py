@@ -59,7 +59,7 @@ class Plotter():
         if model.show_plot:
             plt.ion()
         
-        y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)     
+        y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh)     
 
         self.h_y_lim = np.array(h).max()*1.1
         self.u_y_lim = np.array(q).max()*1.1
@@ -82,7 +82,7 @@ class Plotter():
 
     def update_plot(self, model):
 
-        y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)     
+        y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh)     
         y = y*x_N*self.h_0        
 
         self.title.set_text(timestep_info_string(model, True))
@@ -224,7 +224,7 @@ class Adjoint_Plotter():
         self.dj_plot.set_xlabel(r'$x$')
         self.dj_plot.set_ylabel(r'$\partial J \over \partial \varphi$')
 
-        y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh) 
+        y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh) 
 
         if self.options['target_ic']['phi'] is not None:
             self.target_phi_line, = self.ic_plot.plot(y, 
@@ -281,7 +281,7 @@ def clear_model_files(file):
 
 def write_model_to_files(model, method, file):
 
-    y, q, h, phi, phi_d, x_N, u_N, k = map_to_arrays(model.w[0], model.y, model.mesh)    
+    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh)    
 
     write_array_to_file(file + '_q.json', q, method)
     write_array_to_file(file + '_h.json', h, method)
@@ -297,37 +297,29 @@ def print_timestep_info(model):
 
 def timestep_info_string(model, tex=False):
 
-    arr = model.w[0].vector().array()
     n_ele = len(model.mesh.cells())
-
-    x_N = arr[model.W.sub(4).dofmap().cell_dofs(0)[0]]
-    u_N = arr[model.W.sub(5).dofmap().cell_dofs(0)[0]]
-    h_N = arr[model.W.sub(1).dofmap().cell_dofs(n_ele - 1)[-1]]
-    timestep = arr[model.W.sub(6).dofmap().cell_dofs(0)[0]]
-    
-    phi = split(model.w[0])[2]
-    x_N_end = split(model.w[0])[4]
-    x_N_start = model.w['ic'][4]
-    phi_int = assemble(phi*(x_N_end/x_N_start)*dx)
+    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh) 
+    x_N_start = map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
 
     if tex:
         if model.beta.vector().array()[0]:
-            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
+            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, k) +
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
-                    .format(x_N, u_N, h_N, phi_int))
+                    .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
         else:
-            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, timestep) +
+            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, k) +
                     "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
-                    .format(x_N, u_N, h_N, phi_int))
+                    .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
     else:
         if model.beta.vector().array()[0]:
-            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
-                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.2e}"
-                .format(x_N, u_N, h_N, phi_int))
+            return ("{0:6d}, t = {1:.2e}, dt = {2:.2e}: ".format(model.t_step-1, model.t, k) +
+                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.6e}"
+                .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
         else:
-            return ("t = {0:.2e}, dt = {1:.2e}: ".format(model.t, timestep) +
+            import IPython; IPython.embed()
+            return ("{:6d}, t = {0:.2e}, dt = {1:.2e}: ".format(model.t_step-1, model.t, k) +
                 "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.2e}"
-                .format(x_N, u_N, h_N, phi_int))
+                .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
 
 def map_to_arrays(w, x, mesh):
 
@@ -353,10 +345,11 @@ def map_to_arrays(w, x, mesh):
     x_N = arr[W.sub(4).dofmap().cell_dofs(0)[0]]
     u_N = arr[W.sub(5).dofmap().cell_dofs(0)[0]]
     k = arr[W.sub(6).dofmap().cell_dofs(0)[0]]
+    phi_int = arr[W.sub(7).dofmap().cell_dofs(0)[0]]
 
     return (np.array(y).flatten(), np.array(q).flatten(), 
             np.array(h).flatten(), np.array(phi).flatten(), 
-            np.array(phi_d).flatten(), x_N, u_N, k)
+            np.array(phi_d).flatten(), x_N, u_N, k, phi_int)
 
 def map_function_to_array(f, mesh):
 

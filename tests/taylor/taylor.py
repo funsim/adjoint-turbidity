@@ -11,49 +11,34 @@ import sys
 
 set_log_level(ERROR) 
 
-model = Model('taylor.asml', no_init=True)
+model = Model('taylor.asml')
 
 info_blue('Taylor test for beta')
 
-info_green('Running forward model')
-model.initialise()
+# functional
+(q, h, phi, phi_d, x_N, u_N, k, phi_int) = split(model.w[0])
+fn = inner(phi_d, phi_d)
+J = Functional(fn*dx*dt[FINISH_TIME])
 
-def set_ic(f):
-    v = TestFunction(model.R)
-    u = TrialFunction(model.R)
-    a = v*u*dx
-    L = v*f*dx
-    solve(a==L, model.beta)
+def forward(ic):
+  info_green('Running forward model')
+  model.x_N_ic.assign(Constant(ic[0]))
+  model.run()
+  parameters["adjoint"]["stop_annotating"] = True 
+  info_red('F = %e'%assemble(fn*dx))
+  return assemble(fn*dx)
 
-# ic = project(Expression('0.5'), model.V)
-# ic = Constant(0.1)
-# model.adapt_cfl = ic
-ic = project(Expression('0.005'), model.R, name='ic')
-set_ic(ic)
-model.run()
+def backward(ic, forget=True):
+  info_green('Computing adjoint')
+  dJdbeta = compute_gradient(J, InitialConditionParameter(model.x_N_ic), forget=forget)
+  info_red('G = %e'%dJdbeta.vector().array()[0])
+  return [dJdbeta.vector().array()]
 
-parameters["adjoint"]["stop_annotating"] = True 
-
-w_0 = model.w[0]
-J = Functional(inner(w_0, w_0)*dx*dt[FINISH_TIME])
-Jw = assemble(inner(w_0, w_0)*dx)
-
-info_green('Computing adjoint')
-dJdbeta = compute_gradient(J, InitialConditionParameter(ic), forget=False)
-print dJdbeta
-print dJdbeta.vector().array()
-
-def Jhat(ic):
-    info_green('Rerunning forward model')
-    model.initialise()
-    set_ic(ic)
-
-    model.run(annotate = False)
-    w_0 = model.w[0]
-    return assemble(inner(w_0, w_0)*dx)
-
-conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdbeta, value=ic, seed=1e-0)
-# conv_rate = taylor_test(Jhat, InitialConditionParameter(ic), Jw, dJdphi, value=ic)
+conv_rate = helpers.test_gradient_array(forward, 
+                                        backward,
+                                        np.array([1.0]),
+                                        perturbation_direction=np.array([1]),
+                                        seed = 1e0)
 
 info_blue('Minimum convergence order with adjoint information = {}'.format(conv_rate))
 if conv_rate > 1.9:

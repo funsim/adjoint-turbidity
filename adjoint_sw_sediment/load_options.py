@@ -106,7 +106,49 @@ def post_init(model, xml_path):
     model.beta = project(Constant(get_optional(option_path + 'beta', default = 5e-3)), model.R, name="beta")
 
     # initial conditions
+    model.form_ic = (
+        {'id':'momentum', 
+         'function':Function(model.V, name='ic_q'), 
+         'test_function':TestFunction(model.V)}, 
+        {'id':'height', 
+         'function':Function(model.V, name='ic_h'), 
+         'test_function':TestFunction(model.V)}, 
+        {'id':'volume_fraction',  
+         'function':Function(model.V, name='ic_phi'), 
+         'test_function':TestFunction(model.V)}, 
+        {'id':'deposit_depth', 
+         'function':Function(model.V, name='ic_phi_d'), 
+         'test_function':TestFunction(model.V)}, 
+        {'id':'initial_length',
+         'function':Function(model.R, name='ic_X_n'), 
+         'test_function':TestFunction(model.R)},
+        {'id':'front_velocity', 
+         'function':Function(model.R, name='ic_u_N'), 
+         'test_function':TestFunction(model.R)}, 
+        {'id':'timestep',
+         'function':Function(model.R, name='ic_k'), 
+         'test_function':TestFunction(model.R)}, 
+        {'id':'phi_int',
+         'function':Function(model.R, name='ic_phi_int'), 
+         'test_function':TestFunction(model.R)},
+        ) 
+
     option_path = 'initial_conditions/'
+    var_paths = 'momentum', 'height', 'volume_fraction', 'deposit_depth', \
+        'initial_length', 'front_velocity', 'timestep'
+
+    # form defines ic
+    for i, var_path in enumerate(var_paths):
+      path = option_path + var_path + '/form'
+      if libspud.have_option(path):
+        if libspud.have_option(path + '/additional_form_var'):
+          for j in range(libspud.option_count(path + '/additional_form_var/var')):
+            py_code = libspud.get_option(path + '/additional_form_var/var[%d]'%j)
+            exec py_code
+        py_code = "model.form_ic[%d]['form'] = %s"%(i, libspud.get_option(path))
+        exec py_code
+
+    # expression defined ic
     model.w_ic_var = ''
     if (libspud.have_option(option_path + 'variables') and 
         libspud.option_count(option_path + 'variables/var') > 0):
@@ -122,41 +164,11 @@ def post_init(model, xml_path):
               read_ic(option_path + 'deposit_depth', default = '0.0'),
               read_ic(option_path + 'initial_length', default = '1.0'),
               read_ic(option_path + 'front_velocity', default = '1.19'),
-              read_ic(option_path + 'timestep', default = '1.0')
+              read_ic(option_path + 'timestep', default = '1.0'),
+              '0.0'
               )
     exp_str = ('model.w_ic_e = Expression(ic_exp, model.W.ufl_element(), %s)'%model.w_ic_var)
-    exec exp_str in globals(), locals()
-
-    model.override_ic = (
-        {'id':'momentum', 
-         'override':libspud.have_option(option_path + 'momentum/override'), 
-         'function':Function(model.V, name='ic_q'), 
-         'test_function':TestFunction(model.V)}, 
-        {'id':'height', 
-         'override':libspud.have_option(option_path + 'height/override'), 
-         'function':Function(model.V, name='ic_h'), 
-         'test_function':TestFunction(model.V)}, 
-        {'id':'volume_fraction', 
-         'override':libspud.have_option(option_path + 'volume_fraction/override'), 
-         'function':Function(model.V, name='ic_phi'), 
-         'test_function':TestFunction(model.V)}, 
-        {'id':'deposit_depth', 
-         'override':libspud.have_option(option_path + 'deposit_depth/override'), 
-         'function':Function(model.V, name='ic_phi_d'), 
-         'test_function':TestFunction(model.V)}, 
-        {'id':'initial_length',
-         'override': libspud.have_option(option_path + 'initial_length/override'), 
-         'function':Function(model.R, name='ic_X_n'), 
-         'test_function':TestFunction(model.R)},
-        {'id':'front_velocity', 
-         'override':libspud.have_option(option_path + 'front_velocity/override'), 
-         'function':Function(model.R, name='ic_u_N'), 
-         'test_function':TestFunction(model.R)}, 
-        {'id':'timestep',
-         'override':libspud.have_option(option_path + 'timestep/override'), 
-         'function':Function(model.R, name='ic_k'), 
-         'test_function':TestFunction(model.R)}
-        )      
+    exec exp_str in globals(), locals()     
 
 def get_optional(path, default):
     if libspud.have_option(path):
@@ -165,12 +177,7 @@ def get_optional(path, default):
         return default
 
 def read_ic(path, default):
-    if libspud.have_option(path):
-        if libspud.have_option(path + '/python'):
-            py_code = libspud.get_option(path + '/python')
-            exec py_code
-            return c_exp()
-        else:
-            return libspud.get_option(path + '/c_string')
+    if libspud.have_option(path + '/c_string'):
+      return libspud.get_option(path + '/c_string')
     else:
-        return default        
+      return default        

@@ -211,12 +211,12 @@ def replace_ic_value(parameter, new_value):
         f.vector()[:] = new_value
         function.assign(f)
 
-    # Case 2: The new_value is a float
+    # Case 3: The new_value is a float
     elif isinstance(new_value, (np.float64, float, int)):
         function = parameter.coeff
         function.assign(Constant(new_value))
 
-    # # Case 2: The parameter value and new_value are Constants
+    # # Case 4: The parameter value and new_value are Constants
     # elif hasattr(new_value, "value_size"): 
     #     constant = parameter.data()
     #     constant.assign(new_value(()))

@@ -10,102 +10,19 @@ from optparse import OptionParser
 import numpy as np
 import sys
 import pickle
-# hack!!
-sys.setrecursionlimit(100000)
 
 set_log_level(ERROR)
 
-def smooth_abs(val, min = 0.25):
-  return (val**2.0 + min)**0.5
-def smooth_pos(val, min = 0.25):
-  return (val + smooth_abs(val, min))/2.0
-def smooth_min(val, min = 1.0):
-  return smooth_pos(val - min) + min
-
-def end_criteria(model):        
-  (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
-  x_N_start = split(model.w['ic'])[4]
-
-  F = phi*(x_N/x_N_start)*dx
-  int_phi = assemble(F)
-  return int_phi < 0.8
-  # print model.t
-  return model.t > 1.0 #0.0139
-
-# raw data
-phi_d_x = np.array([100,2209.9255583127,6917.3697270472,10792.3076923077,16317.1215880893,20070.9677419355,24657.3200992556,29016.6253101737,32013.6476426799,35252.8535980149,37069.2307692308,39718.1141439206,44410.4218362283,50041.1910669975,54900,79310,82770.0576368876,86477.2622478386,89875.5331412104,97907.8097982709,105013.285302594,112180.547550432,118019.39481268,128461.354466859,132910])
-phi_d_y = np.array([1,1.01,0.98,0.95,0.86,1.13,0.99,1.37,1.42,1.19,1.02,1.05,0.85,0.63,0.74,0.5079365079,0.4761904762,0.4285714286,0.4603174603,0.5714285714,0.7619047619,0.6031746032,0.4285714286,0.3015873016,0.2380952381])
-
-# get linear coefficients
-def fit(n_coeff):
-  X = np.zeros([phi_d_x.shape[0], n_coeff])
-  for i_row in range(phi_d_x.shape[0]):
-    for i_col in range(n_coeff):
-      X[i_row, i_col] = phi_d_x[i_row]**i_col
-  coeff =  np.linalg.inv(X.T.dot(X)).dot(X.T.dot(phi_d_y))
-  y_calc =  np.zeros(phi_d_y.shape)
-  for i_loc in range(phi_d_x.shape[0]):
-    for pow in range(n_coeff):
-      y_calc[i_loc] += coeff[pow]*phi_d_x[i_loc]**pow
-  coeff_C = []
-  for c in coeff:
-    coeff_C.append(Constant(c))
-  return coeff_C
-
-ec_coeff = np.array(fit(2))
-x_N_t = Constant(ec_coeff[0]((0,0))/ec_coeff[1]((0,0)))
-ec_coeff = [ec_coeff[0], Constant(-ec_coeff[0]((0,0)))]
-
-def plot_target():
-  from matplotlib import pyplot as plt
-
-  l = 1.0
-
-  mesh = IntervalMesh(20, 0.0, 1.0)
-  fs = FunctionSpace(mesh, 'CG', 1)
-  y = project(Expression('x[0]'), fs)
-  depth_fn = 0
-  for i, c in enumerate(ec_coeff):
-    depth_fn += c*(l*y)**i
-  d = Function(fs)
-  v = TestFunction(fs)
-  solve(v*depth_fn*dx - v*d*dx == 0, d)
-
-  x = np.linspace(0,l,21)
-  d_2 = np.zeros(x.shape)
-  for i, x_ in enumerate(x):
-    for pow, c in enumerate(ec_coeff):
-      d_2[i] += c*x_**pow
-
-  filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
-  f = Function(fs)
-  solve(v*filt*dx - v*f*dx == 0, f)
-
-  fd = Function(fs)
-  solve(v*depth_fn*dx - v*fd*dx == 0, fd)
-
-  # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-  #          input_output.map_function_to_array(d, mesh))
-  plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-           input_output.map_function_to_array(fd, mesh))
-  # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-  #          input_output.map_function_to_array(f, mesh))
-
-  # plt.plot(phi_d_x, phi_d_y)
-
-  # plt.plot(x, d_2)
-  # plt.ylim(0,1.2)
-
-  plt.show()
-  sys.exit()
-
-# plot_target()
 
 def create_functional(model):
 
   (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
 
   # generate target depth function
+  import target
+  ec_coeff = np.array(target.fit(2))
+  x_N_t = Constant(ec_coeff[0]((0,0))/ec_coeff[1]((0,0)))
+  ec_coeff = [ec_coeff[0], Constant(-ec_coeff[0]((0,0)))]
   depth_fn = 0
   for i, c in enumerate(ec_coeff):
     depth_fn += c*pow(model.y, i)
@@ -138,6 +55,15 @@ def optimisation(values):
   methods = [ "L-BFGS-B", "TNC", "IPOPT", "BF", "OS", "TT" ]
   method = methods[-1]  
 
+  def end_criteria(model):        
+    (q, h, phi, phi_d, x_N, u_N, k) = split(model.w[0])
+    x_N_start = split(model.w['ic'])[4]
+
+    F = phi*(x_N/x_N_start)*dx
+    # int_phi = assemble(F)
+    # return int_phi < 0.8
+    return model.t > 0.0139
+
   model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
 
   # initialise function spaces
@@ -168,13 +94,6 @@ def optimisation(values):
 
   # define form with new beta
   model.generate_form()
-
-  # model ic overrides
-  for override in model.override_ic:
-    if override['id'] == 'initial_length':
-      override['form'] = x_N_ic*model.norms[1]
-    if override['id'] == 'timestep':
-      override['form'] = model.dX*x_N_ic*model.norms[1]/model.Fr*model.adapt_cfl
 
   def prep_model_cb(model, value = None):
     if value is not None:
@@ -255,8 +174,8 @@ def optimisation(values):
     helpers.test_gradient_array(rf.compute_functional_mem, 
                                 rf.compute_gradient_mem,
                                 np.array(values),
-                                perturbation_direction=np.array([1,0]),
-                                seed = 1e-2)
+                                perturbation_direction=np.array([0,1]),
+                                seed = 1e1)
 
   if method == "IPOPT":
     rfn = ReducedFunctionalNumPy(rf)
