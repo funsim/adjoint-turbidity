@@ -316,10 +316,10 @@ class Model():
                 for it in range(nl_it):
                   self.w['linear'].assign(self.w['int'])
                   # solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
-                  solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
-                  # b = assemble(self.rhs_rk, cache=True)
-                  # for bc in self.bc: bc.apply(self.LHS_RK, b)
-                  # solve(self.LHS_RK, self.w['int'].vector(), b)
+                  # solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
+                  b = assemble(self.rhs_rk, cache=True)
+                  for bc in self.bc: bc.apply(self.LHS_RK, b)
+                  solve(self.LHS_RK, self.w['int'].vector(), b)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
@@ -328,10 +328,10 @@ class Model():
                 for it in range(nl_it):
                   self.w['linear'].assign(self.w['int'])
                   # solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
-                  solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
-                  # b = assemble(self.rhs_rk, cache=True)
-                  # for bc in self.bc: bc.apply(self.LHS_RK, b)
-                  # solve(self.LHS_RK, self.w['int'].vector(), b)
+                  # solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
+                  b = assemble(self.rhs_rk, cache=True)
+                  for bc in self.bc: bc.apply(self.LHS_RK, b)
+                  solve(self.LHS_RK, self.w['int'].vector(), b)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
