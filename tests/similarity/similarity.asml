@@ -13,11 +13,6 @@
     <start_time>
       <real_value rank="0">0.5</real_value>
     </start_time>
-    <adaptive_timestep>
-      <cfl_criteria>
-        <real_value rank="0">0.01</real_value>
-      </cfl_criteria>
-    </adaptive_timestep>
     <finish_time>
       <real_value rank="0">0.75</real_value>
     </finish_time>

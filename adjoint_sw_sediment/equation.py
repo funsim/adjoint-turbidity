@@ -63,44 +63,44 @@ class Equation():
 
         if enable:
         # coordinate transforming advection term
-            self.F = - k_td*grad(v)[0]*ux*u['td']*dx - k_td*v*grad(ux)[0]*u['td']*dx
+            self.F = - k_td/x_N_td*(grad(v)[0]*ux*u['td'] + v*grad(ux)[0]*u['td'])*dx
 
             # surface integrals for coordinate transforming advection term
-            self.F += avg(k_td)*jump(v)*(uxn_up('+')*u['td']('+') - uxn_up('-')*u['td']('-'))*dS 
+            self.F += avg(k_td/x_N_td)*jump(v)*(uxn_up('+')*u['td']('+') - uxn_up('-')*u['td']('-'))*dS 
             if model.mms:
-                self.F += k_td*v*ux_n*u['td']*(model.ds(0) + model.ds(1))
+                self.F += k_td/x_N_td*v*ux_n*u['td']*(model.ds(0) + model.ds(1))
             else:
                 for i, wb in enumerate(weak_b):
                     if wb != None:
-                        self.F += k_td*v*ux_n*wb*model.ds(i)
+                        self.F += k_td/x_N_td*v*ux_n*wb*model.ds(i)
                     else:
-                        self.F += k_td*v*ux_n*u['td']*model.ds(i)
+                        self.F += k_td/x_N_td*v*ux_n*u['td']*model.ds(i)
 
             # mass term
             if not model.mms:
                 if model.time_discretise.func_name == 'runge_kutta':
-                    self.F += x_N_td*v*(u['int'] - u['td'])*dx
+                    self.F += v*(u['int'] - u['td'])*dx
                 else:
-                    self.F += x_N_td*v*(u[0] - u[1])*dx
+                    self.F += v*(u[0] - u[1])*dx
 
             # mms bc
             if model.mms:
-                self.F -= k_td*v*u['td']*model.n*(model.ds(0) + model.ds(1))
-                self.F += k_td*v*model.w_ic_e[index]*model.n*(model.ds(0) + model.ds(1)) 
+                self.F -= k_td/x_N_td*v*u['td']*model.n*(model.ds(0) + model.ds(1))
+                self.F += k_td/x_N_td*v*model.w_ic_e[index]*model.n*(model.ds(0) + model.ds(1)) 
 
             # grad term
             if grad_term:
-                self.F -= k_td*grad(v)[0]*grad_term*dx
-                self.F += k_td*v*grad_term*model.n*(model.ds(0) + model.ds(1))
-                self.F += avg(k_td)*jump(v)*avg(grad_term)*model.n('+')*dS
+                self.F -= k_td/x_N_td*grad(v)[0]*grad_term*dx
+                self.F += k_td/x_N_td*v*grad_term*model.n*(model.ds(0) + model.ds(1))
+                self.F += avg(k_td/x_N_td)*jump(v)*avg(grad_term)*model.n('+')*dS
                 # self.F += k_td*v*grad_n*(model.ds(0) + model.ds(1))
                 # self.F += avg(k_td)*jump(v)*(grad_n_up('+') - grad_n_up('-'))*dS
 
             # source terms
             if model.mms:
-                self.F += x_N_td*v*model.S[index]*k_td*dx
+                self.F += v*model.S[index]*k_td*dx
             if source:
-                self.F += v*k_td*x_N_td*source*dx
+                self.F += v*k_td*source*dx
 
         else:
             # identity

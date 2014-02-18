@@ -238,7 +238,7 @@ class Model():
         v = TestFunction(self.W)[6]
         if self.adapt_timestep:
             if self.time_discretise.func_name == 'runge_kutta':
-                F_k = v*k['int']*dx - v*x_N['int']*self.dX/u_N['linear']*self.adapt_cfl*dx
+                F_k = v*k['int']*dx - v*x_N['linear']*self.dX/u_N['linear']*self.adapt_cfl*dx
             else:
                 F_k = v*k[0]*dx - v*x_N[0]*self.dX/u_N[0]*self.adapt_cfl*dx
         else:
@@ -261,14 +261,12 @@ class Model():
             self.F_rk = self.F
             self.lhs_rk, self.rhs_rk = lhs(self.F_rk), rhs(self.F_rk)
             # self.J_rk = derivative(self.F_rk, self.w['int'], TrialFunction(self.W))
-
             self.LHS_RK = assemble(self.lhs_rk)
             
             v = TestFunction(self.W)
             # self.F = inner(v, (self.w[0] - 0.5*self.w[1] - 0.5*self.w['int']))*dx
             self.F = inner(v, (self.w['int'] - 0.5*self.w[1] - 0.5*self.w['td']))*dx
             self.lhs, self.rhs = lhs(self.F), rhs(self.F)
-
             self.LHS = assemble(self.lhs)
         
         # # compute directional derivative about u in the direction of du (Jacobian)
@@ -306,6 +304,7 @@ class Model():
 
             # ------------------------------------ #
 
+            # runge kutta (2nd order)
             if self.time_discretise.func_name == 'runge_kutta':
                 nl_it = 2
 
@@ -316,10 +315,10 @@ class Model():
                 for it in range(nl_it):
                   self.w['linear'].assign(self.w['int'])
                   # solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
-                  # solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
-                  b = assemble(self.rhs_rk, cache=True)
-                  for bc in self.bc: bc.apply(self.LHS_RK, b)
-                  solve(self.LHS_RK, self.w['int'].vector(), b)
+                  solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
+                  # b = assemble(self.rhs_rk, cache=True)
+                  # for bc in self.bc: bc.apply(self.LHS_RK, b)
+                  # solve(self.LHS_RK, self.w['int'].vector(), b)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
@@ -328,20 +327,20 @@ class Model():
                 for it in range(nl_it):
                   self.w['linear'].assign(self.w['int'])
                   # solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
-                  # solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
-                  b = assemble(self.rhs_rk, cache=True)
-                  for bc in self.bc: bc.apply(self.LHS_RK, b)
-                  solve(self.LHS_RK, self.w['int'].vector(), b)
+                  solve(self.lhs_rk == self.rhs_rk, self.w['int'], bcs=self.bc)
+                  # b = assemble(self.rhs_rk, cache=True)
+                  # for bc in self.bc: bc.apply(self.LHS_RK, b)
+                  # solve(self.LHS_RK, self.w['int'].vector(), b)
 
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
                 # solve(self.F == 0, self.w[0], J=self.J, bcs=self.bc)
-                # solve(self.lhs == self.rhs, self.w[0], bcs=self.bc)
-                b = assemble(self.rhs, cache=True)
-                for bc in self.bc: bc.apply(self.LHS, b)
-                solve(self.LHS, self.w[0].vector(), b)
+                solve(self.lhs == self.rhs, self.w[0], bcs=self.bc)
+                # b = assemble(self.rhs, cache=True)
+                # for bc in self.bc: bc.apply(self.LHS, b)
+                # solve(self.LHS, self.w[0].vector(), b)
 
             else:
 
