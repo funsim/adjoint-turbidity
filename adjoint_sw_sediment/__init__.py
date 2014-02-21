@@ -17,3 +17,4 @@ from model import Model
 from my_reduced_functional import *
 import input_output
 import helpers
+import equation

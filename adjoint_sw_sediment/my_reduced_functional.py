@@ -160,6 +160,7 @@ class MyReducedFunctional(ReducedFunctional):
             dj = np.array([dj_.vector().array() for dj_ in dj])
             r = dj/np.array(memoizable_m)
             self.auto_scale = 0.1/abs(r).max()
+            info_green('Auto scale factor = %e'%self.auto_scale)
             j = self.auto_scale*j
           else:
             j = self.auto_scale*j
@@ -182,7 +183,7 @@ class MyReducedFunctional(ReducedFunctional):
         self.save_checkpoint("checkpoint" + self.method)
         
         if self.auto_scaling and self.auto_scale is not None:
-          info_green('scaling')
+          info_green('Scaling gradients by factor = %e'%self.auto_scale)
           dj = self.auto_scale*dj
           
         dj_f = []

@@ -29,7 +29,17 @@ def gen_target(model, h_0_norm):
   q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
   for i, c in enumerate(ec_coeff):
     target += c*pow(model.y*x_N*model.h_0*h_0_norm, i)
-  return target
+
+  return equation.smooth_pos(target)
+
+def plot_functions(model, fns):
+  from matplotlib import pyplot as plt
+  for fn in fns:
+    plt.plot(input_output.map_function_to_array(model.y, model.mesh), 
+             input_output.map_function_to_array(fn, model.mesh),
+             label=fn.name())
+  plt.legend()
+  plt.show()
 
 if __name__=='__main__':
   from matplotlib import pyplot as plt

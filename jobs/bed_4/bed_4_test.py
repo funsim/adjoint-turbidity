@@ -15,9 +15,8 @@ sys.setrecursionlimit(100000)
 
 set_log_level(ERROR)
 
-# parameter normalisation - x_N is 1.0
-h_0_norm = Constant(1000.0)
-phi_0_norm = Constant(0.01)
+# parameter normalisation (not for x_N)
+h_0_norm = Constant(10000.0)
 
 ################################## 
 # MODEL SETUP
@@ -25,7 +24,7 @@ phi_0_norm = Constant(0.01)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 50:
+  if model.t_step > 400:    # Taylor works nicely at <=150
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -60,7 +59,10 @@ model.generate_form()
 ################################## 
 # CREATE REDUCED FUNCTIONAL
 ################################## 
+v = TestFunction(model.R)
 
+model.h_0.assign(Constant(0.1))
+model.x_N_ic.assign(Constant(1.0))
 parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
@@ -72,23 +74,22 @@ t = target.gen_target(model, h_0_norm)
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
 
 # scaling to remove phi_0
-v = TestFunction(model.R)
-model.f_nom = Function(model.R)
-model.f_denom = Function(model.R)
-a = phi_d*model.h_0*h_0_norm
-model.f_nom_f = v*a*t*dx - v*model.f_nom*dx
-model.f_denom_f = v*a**2*dx - v*model.f_denom*dx
+t_int = Function(model.R)
+phi_d_int = Function(model.R)
+t_int_F = v*t_int*dx - v*t*dx 
+phi_d_int_F = v*phi_d_int*dx - v*phi_d*dx
 def prep_target_cb(model):
-  solve(model.f_nom_f == 0, model.f_nom)
-  solve(model.f_denom_f == 0, model.f_denom)
+  solve(t_int_F == 0, t_int)
+  solve(phi_d_int_F == 0, phi_d_int)
 
-# define functional - phi_0 included in PDE (works that way)
-diff = (model.f_nom/model.f_denom)*phi_d*model.h_0*h_0_norm - t
-model.fn = inner(diff, diff)
-functional = Functional(model.fn*dx*dt[FINISH_TIME])
+# define functional 
+non_dim_t = (phi_d_int/t_int)*t
+diff = phi_d - non_dim_t
+J_integral = inner(diff, diff)
+J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "TT"#"L-BFGS-B"
-rf = MyReducedFunctional(model, functional, parameters,
+method = "TT" #"L-BFGS-B"
+rf = MyReducedFunctional(model, J, parameters,
                          scale = 1.0, autoscale = True,
                          prep_target_cb = prep_target_cb,
                          method = method)  
@@ -100,13 +101,6 @@ if method == "OS":
   rf.autoscale = False
   rf.compute_functional_mem(np.array([2.1837727883,
                                       1.5987446258]))
-  y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
-          input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-  v = TestFunction(model.V)
-  fn = Function(model.V)
-  solve(v*model.fn*dx - v*fn*dx == 0, fn)
-  print phi_d*model.h_0.vector().array()[0]*h_0_norm((0,0)), x_N
-  print input_output.map_function_to_array(fn, model.mesh)
 
 ################################## 
 # TAYLOR TEST
@@ -119,10 +113,20 @@ if method == "TT":
                               # perturbation_direction = np.array([0.0,0.0]),
                               seed = 1e-4)
 
+if method == "OS" or method == "TT":
+  q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
+  v = TestFunction(model.V)
+  J_proj = Function(model.V, name='functional')
+  solve(v*diff*dx - v*J_proj*dx == 0, J_proj)
+  phi_d_proj = Function(model.V, name='phi d')
+  solve(v*phi_d*dx - v*phi_d_proj*dx == 0, phi_d_proj)
+  t_proj = Function(model.V, name='target')
+  solve(v*non_dim_t*dx - v*t_proj*dx == 0, t_proj)
+  target.plot_functions(model, [J_proj, phi_d_proj, t_proj])
+
 ################################## 
 # OPTIMISE 
 ################################## 
-
 bnds =   (
   ( 
     0.25, 100/h_0_norm((0,0))
@@ -135,7 +139,6 @@ bnds =   (
 ################################## 
 # L-BFGS-B
 ################################## 
-
 if method == "L-BFGS-B":
   m_opt = minimize(rf, method = "L-BFGS-B", 
                    options = {'disp': True }, 
@@ -145,7 +148,6 @@ if method == "L-BFGS-B":
 ################################## 
 # IPOPT
 ################################## 
-
 if method == "IPOPT":
   # call once to initialise
   rf([p.coeff for p in parameters])

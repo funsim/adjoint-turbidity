@@ -20,10 +20,12 @@ def test_gradient_array(J, dJ, x, seed=0.01, perturbation_direction=None, plot_f
     # First run the problem unperturbed
     info_blue("Running forward model ... ")
     j_direct = J(x)
+    info_green("Functional value                  : %+010.7e"%j_direct)
 
     # obtain gradient
     info_blue("Running adjoint model ... ")
     dj = dJ(x, forget=True)
+    info_green("Gradient                          : %s" % str(['%+010.7e'%g[0] for g in dj]))
 
     # Randomise the perturbation direction:
     if perturbation_direction is None:
@@ -49,7 +51,7 @@ def test_gradient_array(J, dJ, x, seed=0.01, perturbation_direction=None, plot_f
     no_gradient = [abs(perturbed_j - j_direct) for perturbed_j in functional_values]
 
     info_green("dJ using gradient                 : %s" % str(['%+010.7e'%d[0] for d in dot(perturbations, dj)]))
-    info_green("actual dJ                         : %s" % str(['%+010.7e'%(perturbed_j - j_direct) for perturbed_j in functional_values]))
+    info_green("Actual dJ                         : %s" % str(['%+010.7e'%(perturbed_j - j_direct) for perturbed_j in functional_values]))
     # info_green("Absolute functional evaluation differences: %s" % str(no_gradient))
     info_green("Convergence orders without adjoint: %s" % str(['%+010.7e'%g for g in convergence_order(no_gradient)]))
 
