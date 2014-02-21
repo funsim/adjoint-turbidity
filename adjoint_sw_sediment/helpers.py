@@ -15,12 +15,14 @@ def test_gradient_array(J, dJ, x, seed=0.01, perturbation_direction=None, plot_f
 
     # We will compute the gradient of the functional with respect to the initial condition,
     # and check its correctness with the Taylor remainder convergence test.
-    info("Running Taylor remainder convergence analysis to check the gradient ... ")
+    info_blue("Running Taylor remainder convergence analysis to check the gradient ... ")
 
     # First run the problem unperturbed
+    info_blue("Running forward model ... ")
     j_direct = J(x)
 
     # obtain gradient
+    info_blue("Running adjoint model ... ")
     dj = dJ(x, forget=True)
 
     # Randomise the perturbation direction:
@@ -40,6 +42,7 @@ def test_gradient_array(J, dJ, x, seed=0.01, perturbation_direction=None, plot_f
         perturbations.append(perturbation)
 
         perturbed_x = x.copy() + perturbation
+        info_blue("Rerunning forward model with perturbation")
         functional_values.append(J(perturbed_x))
 
     # First-order Taylor remainders (not using adjoint)

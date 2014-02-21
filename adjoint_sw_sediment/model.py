@@ -205,7 +205,7 @@ class Model():
         self.E[3] = Equation(model=self,
                              index=3, 
                              weak_b = (phi_d['td'], 0.0),
-                             source = -self.beta*phi['td']/h['td'], 
+                             source = -self.beta*phi['td']*self.phi_0/h['td'], 
                              enable=True)
         
         # NOSE LOCATION
@@ -245,7 +245,7 @@ class Model():
         # define sediment integral form
         v = TestFunction(self.W)[7]
         if self.time_discretise.func_name == 'runge_kutta':
-            F_phi_int = v*phi_int['int']*dx - v*phi['td']*dx
+            F_phi_int = v*phi_int['int']*dx - v*phi['int']*dx
         else:
             F_phi_int = v*phi_int[0]*dx - v*phi[0]*dx
 

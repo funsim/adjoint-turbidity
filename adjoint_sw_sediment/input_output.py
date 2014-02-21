@@ -67,7 +67,10 @@ class Plotter():
         
         self.fig = plt.figure(figsize=(12, 12), dpi=200)
         self.fig.subplots_adjust(left = 0.15, wspace = 0.3, hspace = 0.3) 
-        if model.beta.vector().array()[0]:
+
+        try: beta = model.beta.vector().array()[0]
+        except: beta = False
+        if beta:
             self.q_plot = self.fig.add_subplot(221)
             self.h_plot = self.fig.add_subplot(222)
             self.phi_plot = self.fig.add_subplot(223)
@@ -86,16 +89,19 @@ class Plotter():
         y = y*x_N*self.h_0        
 
         self.title.set_text(timestep_info_string(model, True))
+
+        try: beta = model.beta.vector().array()[0]
+        except: beta = False
         
         self.q_plot.clear()
         self.h_plot.clear()
-        if model.beta.vector().array()[0]:
+        if beta:
             self.phi_plot.clear()
             self.phi_d_plot.clear()
 
         self.q_plot.set_ylabel(r'$u$')
         self.h_plot.set_ylabel(r'$h$')
-        if model.beta.vector().array()[0]:
+        if beta:
             self.phi_plot.set_xlabel(r'$x$')
             self.phi_plot.set_ylabel(r'$\varphi$')
             self.phi_d_plot.set_xlabel(r'$x$')
@@ -105,7 +111,7 @@ class Plotter():
 
         self.q_line, = self.q_plot.plot(y, q/h*(self.g*self.h_0)**0.5, 'r-')
         self.h_line, = self.h_plot.plot(y, h*self.h_0, 'r-')
-        if model.beta.vector().array()[0]:
+        if beta:
             self.phi_line, = self.phi_plot.plot(y, phi*self.phi_0, 'r-')
             self.phi_d_line, = self.phi_d_plot.plot(y, phi_d*self.phi_0*self.h_0, 'r-')
 
@@ -142,7 +148,7 @@ class Plotter():
         self.h_plot.set_autoscaley_on(False)
         self.h_plot.set_xlim([0.0,x_lim])
         self.h_plot.set_ylim([0.0,self.h_y_lim]) #h_int.min()*0.9,self.h_y_lim])
-        if model.beta.vector().array()[0]:
+        if beta:
             self.phi_plot.set_autoscaley_on(False)
             self.phi_plot.set_xlim([0.0,x_lim])
             self.phi_plot.set_ylim([0.0,self.phi_y_lim])
@@ -301,25 +307,17 @@ def timestep_info_string(model, tex=False):
     y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh) 
     x_N_start = map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
 
+    try: beta = model.beta.vector().array()[0]
+    except: beta = False
+
     if tex:
-        if model.beta.vector().array()[0]:
-            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, k) +
-                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
-                    .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
-        else:
-            return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, k) +
-                    "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
-                    .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
+      return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, k) +
+              "$x_N$ = {0:.2e}, $\dot{{x}}_N$ = {1:.2e}, $h_N$ = {2:.2e}, $\int \phi$ = {3:.2e}"
+              .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
     else:
-        if model.beta.vector().array()[0]:
-            return ("{0:6d}, t = {1:.2e}, dt = {2:.2e}: ".format(model.t_step-1, model.t, k) +
-                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.6e}"
-                .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
-        else:
-            import IPython; IPython.embed()
-            return ("{:6d}, t = {0:.2e}, dt = {1:.2e}: ".format(model.t_step-1, model.t, k) +
-                "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.2e}"
-                .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
+      return ("{0:6d}, t = {1:.2e}, dt = {2:.2e}: ".format(model.t_step-1, model.t, k) +
+              "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.3e}"
+              .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
 
 def map_to_arrays(w, x, mesh):
 

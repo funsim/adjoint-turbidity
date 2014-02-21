@@ -26,7 +26,8 @@ class MyReducedFunctional(ReducedFunctional):
 
     def __init__(self, model, functional, parameter, scaled_parameters = [], scale = 1.0, eval_cb = None, 
                  derivative_cb = None, replay_cb = None, hessian_cb = None, prep_target_cb=None, 
-                 prep_model_cb=None, ignore = [], cache = None, adj_plotter = None, autoscale = True):
+                 prep_model_cb=None, ignore = [], cache = None, adj_plotter = None, autoscale = True,
+                 method = ""):
 
         # functional setup
         self.scaled_parameters = scaled_parameters
@@ -38,6 +39,9 @@ class MyReducedFunctional(ReducedFunctional):
 
         # set model
         self.model = model
+        
+        # set method
+        self.method = method
 
         # call super.init()
         super(MyReducedFunctional, self).__init__(functional, parameter, scale = scale, 
@@ -118,7 +122,7 @@ class MyReducedFunctional(ReducedFunctional):
         self.compute_functional_mem = memoize.MemoizeMutable(compute_functional, hash_keys)
         self.compute_gradient_mem = memoize.MemoizeMutable(compute_gradient, hash_keys)
 
-        self.load_checkpoint()
+        self.load_checkpoint("checkpoint" + self.method)
 
     def save_checkpoint(self, base_filename):
         base_path = base_filename
@@ -140,7 +144,7 @@ class MyReducedFunctional(ReducedFunctional):
 
         memoizable_m = [val.vector().array() for val in m]
         self.last_m = memoizable_m
-        info_green('Input values: %e, %e', memoizable_m[0], memoizable_m[1])
+        info_green('Input values: %s', str(['%+010.7e'%m[0] for m in memoizable_m]))
         
         info_blue('Start evaluation of j')
         timer = dolfin.Timer("j evaluation") 
@@ -152,7 +156,7 @@ class MyReducedFunctional(ReducedFunctional):
 
         if self.auto_scaling:
           if self.auto_scale is None:
-            dj = self.derivative(forget=True, project=False)
+            dj = self.derivative(forget=False, project=False)
             dj = np.array([dj_.vector().array() for dj_ in dj])
             r = dj/np.array(memoizable_m)
             self.auto_scale = 0.1/abs(r).max()
@@ -175,10 +179,10 @@ class MyReducedFunctional(ReducedFunctional):
         timer.stop()
         info_blue('Backward Runtime: ' + str(timer.value())  + " s")
 
-        self.save_checkpoint("checkpoint")
+        self.save_checkpoint("checkpoint" + self.method)
         
         if self.auto_scaling and self.auto_scale is not None:
-          print 'scaling'
+          info_green('scaling')
           dj = self.auto_scale*dj
           
         dj_f = []
@@ -186,12 +190,12 @@ class MyReducedFunctional(ReducedFunctional):
           dj_f.append(Function(self.parameter[i].coeff.function_space()))
           dj_f[-1].vector()[:] = dj_
 
-        info_green('Gradients: %e, %e', dj[0], dj[1])
+        info_green('Gradients: %s', str(['%+010.7g'%g for g in dj]))
         # save gradient
         self.results['gradient'] = to_tuple(dj)
 
         # save results dict
-        f = open('opt_%d.pckl'%self.results['id'],'w')
+        f = open('opt_%s_%d.pckl'%(self.method,self.results['id']),'w')
         pickle.dump(self.results, f)
         f.close()
         
