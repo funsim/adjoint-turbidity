@@ -205,7 +205,7 @@ class Model():
         self.E[3] = Equation(model=self,
                              index=3, 
                              weak_b = (phi_d['td'], 0.0),
-                             source = -self.beta*phi['td']*self.phi_0/h['td'], 
+                             source = -self.beta*phi['td']/h['td'], 
                              enable=True)
         
         # NOSE LOCATION

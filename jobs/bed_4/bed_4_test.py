@@ -25,15 +25,15 @@ phi_0_norm = Constant(0.01)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 450:
-    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
-        input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-    x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
-    phi_int_s = phi_int*x_N/x_N_start
-    if phi_int_s > 0.05:
-      info_red("ERROR: stopping criteria not reached in alloted timesteps")
-      info_red("phi_int was %f"%phi_int_s)
-      sys.exit()
+  if model.t_step > 50:
+    # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
+    #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
+    # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
+    # phi_int_s = phi_int*x_N/x_N_start
+    # if phi_int_s > 0.05:
+    #   info_red("ERROR: stopping criteria not reached in alloted timesteps")
+    #   info_red("phi_int was %f"%phi_int_s)
+    #   sys.exit()
     return True
   return False
 
@@ -61,26 +61,36 @@ model.generate_form()
 # CREATE REDUCED FUNCTIONAL
 ################################## 
 
-parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0),
-              InitialConditionParameter(model.phi_0)]
+parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
 junk = project(model.h_0, model.R)
-junk = project(model.phi_0, model.R)
 
 # target deposit
 t = target.gen_target(model, h_0_norm)
 
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
 
+# scaling to remove phi_0
+v = TestFunction(model.R)
+model.f_nom = Function(model.R)
+model.f_denom = Function(model.R)
+a = phi_d*model.h_0*h_0_norm
+model.f_nom_f = v*a*t*dx - v*model.f_nom*dx
+model.f_denom_f = v*a**2*dx - v*model.f_denom*dx
+def prep_target_cb(model):
+  solve(model.f_nom_f == 0, model.f_nom)
+  solve(model.f_denom_f == 0, model.f_denom)
+
 # define functional - phi_0 included in PDE (works that way)
-diff = phi_d*model.h_0*h_0_norm*phi_0_norm - t
+diff = (model.f_nom/model.f_denom)*phi_d*model.h_0*h_0_norm - t
 model.fn = inner(diff, diff)
 functional = Functional(model.fn*dx*dt[FINISH_TIME])
 
 method = "TT"#"L-BFGS-B"
 rf = MyReducedFunctional(model, functional, parameters,
                          scale = 1.0, autoscale = True,
+                         prep_target_cb = prep_target_cb,
                          method = method)  
 
 ################################## 
@@ -88,18 +98,14 @@ rf = MyReducedFunctional(model, functional, parameters,
 ################################## 
 if method == "OS":
   rf.autoscale = False
-  # rf.compute_functional_mem(np.array([3.9721653,
-  #                                     1.0932433,
-  #                                     1.0941169]))
   rf.compute_functional_mem(np.array([2.1837727883,
-                                      1.5987446258,
-                                      2.0209628927]))
+                                      1.5987446258]))
   y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
           input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
   v = TestFunction(model.V)
   fn = Function(model.V)
   solve(v*model.fn*dx - v*fn*dx == 0, fn)
-  print phi_d*model.h_0.vector().array()[0]*h_0_norm((0,0))*phi_0_norm((0,0)), x_N
+  print phi_d*model.h_0.vector().array()[0]*h_0_norm((0,0)), x_N
   print input_output.map_function_to_array(fn, model.mesh)
 
 ################################## 
@@ -109,8 +115,8 @@ if method == "TT":
   rf.autoscale = False
   helpers.test_gradient_array(rf.compute_functional_mem, 
                               rf.compute_gradient_mem,
-                              np.array([1.0, 1.0, 1.0]),
-                              # perturbation_direction = np.array([0.0,0.0,1.0]),
+                              np.array([1.0, 1.0]),
+                              # perturbation_direction = np.array([0.0,0.0]),
                               seed = 1e-4)
 
 ################################## 
@@ -119,10 +125,10 @@ if method == "TT":
 
 bnds =   (
   ( 
-    0.25, 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0)) 
+    0.25, 100/h_0_norm((0,0))
     ), 
   ( 
-    4.0, 4000/h_0_norm((0,0)), 0.1/phi_0_norm((0,0))
+    4.0, 4000/h_0_norm((0,0))
     )
   )
 
