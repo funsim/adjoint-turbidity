@@ -30,7 +30,7 @@ def gen_target(model, h_0_norm):
   for i, c in enumerate(ec_coeff):
     target += c*pow(model.y*x_N*model.h_0*h_0_norm, i)
 
-  return equation.smooth_pos(target)
+  return equation.smooth_pos(target, eps=1e-5)
 
 def plot_functions(model, fns):
   from matplotlib import pyplot as plt
