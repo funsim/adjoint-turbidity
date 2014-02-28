@@ -29,10 +29,13 @@
   <initial_conditions>
     <initial_length>
       <form>
-        <string_value lines="20" type="code" language="python">model.x_N_ic</string_value>
+        <string_value lines="20" type="code" language="python">model.x_N_ic*model.x_N_norm</string_value>
         <additional_form_var>
           <var name="x_N_ic">
-            <string_value lines="20" type="code" language="python">model.x_N_ic = project(Constant(2.0), model.R, name='x_N_ic')</string_value>
+            <string_value lines="20" type="code" language="python">model.x_N_ic = project(Constant(1.0), model.R, name='x_N_ic')</string_value>
+          </var>
+          <var name="x_N_norm">
+            <string_value lines="20" type="code" language="python">model.x_N_norm = Constant(0.001, name='x_N_norm')</string_value>
           </var>
         </additional_form_var>
       </form>
