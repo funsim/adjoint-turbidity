@@ -22,7 +22,7 @@ set_log_level(ERROR)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 200:    # Taylor works nicely at <=150
+  if model.t_step > 450:    # Taylor works nicely at <=150
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -86,8 +86,8 @@ def prep_target_cb(model):
   solve(phi_d_int_F == 0, phi_d_int)
 
 # define functional 
-# non_dim_t = (phi_d_int/t_int)*t
-diff = (t_int/phi_d_int)*phi_d - t
+non_dim_t = (phi_d_int/t_int)*t
+diff = phi_d - non_dim_t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
