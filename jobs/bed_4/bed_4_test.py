@@ -10,13 +10,11 @@ from optparse import OptionParser
 import numpy as np
 import sys
 import pickle
+import pynotify
 # hack!!
 sys.setrecursionlimit(100000)
 
 set_log_level(ERROR)
-
-# parameter normalisation (not for x_N)
-h_0_norm = Constant(10000.0)
 
 ################################## 
 # MODEL SETUP
@@ -24,7 +22,7 @@ h_0_norm = Constant(10000.0)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 400:    # Taylor works nicely at <=150
+  if model.t_step > 200:    # Taylor works nicely at <=150
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -33,6 +31,7 @@ def end_criteria(model):
     #   info_red("ERROR: stopping criteria not reached in alloted timesteps")
     #   info_red("phi_int was %f"%phi_int_s)
     #   sys.exit()
+    print model.t
     return True
   return False
 
@@ -40,6 +39,10 @@ def end_criteria(model):
 model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
 model.initialise_function_spaces()
 load_options.post_init(model, model.xml_path)
+
+# parameter normalisation
+h_0_norm = Constant(10.0)
+model.x_N_norm.assign(Constant(100.0))
 
 # define model stopping criteria
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
@@ -61,8 +64,8 @@ model.generate_form()
 ################################## 
 v = TestFunction(model.R)
 
-model.h_0.assign(Constant(0.1))
-model.x_N_ic.assign(Constant(1.0))
+model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
+model.x_N_ic.assign( Constant( 1.0/model.x_N_norm((0,0)) ) )
 parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
@@ -83,14 +86,14 @@ def prep_target_cb(model):
   solve(phi_d_int_F == 0, phi_d_int)
 
 # define functional 
-non_dim_t = (phi_d_int/t_int)*t
-diff = phi_d - non_dim_t
+# non_dim_t = (phi_d_int/t_int)*t
+diff = (t_int/phi_d_int)*phi_d - t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
 method = "TT" #"L-BFGS-B"
 rf = MyReducedFunctional(model, J, parameters,
-                         scale = 1.0, autoscale = True,
+                         scale = 1e0, autoscale = True,
                          prep_target_cb = prep_target_cb,
                          method = method)  
 
@@ -107,13 +110,18 @@ if method == "OS":
 ################################## 
 if method == "TT":
   rf.autoscale = False
+  # h_0 works with seed = 1e1
   helpers.test_gradient_array(rf.compute_functional_mem, 
                               rf.compute_gradient_mem,
-                              np.array([1.0, 1.0]),
-                              # perturbation_direction = np.array([0.0,0.0]),
-                              seed = 1e-4)
+                              np.array([model.x_N_ic.vector().array()[0], 
+                                        model.h_0.vector().array()[0]]),
+                              perturbation_direction = np.array([1.0,0.0]),
+                              seed = 8e-3)
+  pynotify.init("Test")
+  notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
+  notice.show()
 
-if method == "OS" or method == "TT":
+if method == "OS":# or method == "TT":
   q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
   v = TestFunction(model.V)
   J_proj = Function(model.V, name='functional')
