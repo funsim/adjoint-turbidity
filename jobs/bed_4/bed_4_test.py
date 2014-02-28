@@ -22,7 +22,7 @@ set_log_level(ERROR)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 450:    # Taylor works nicely at <=150
+  if model.t_step > 450:  
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -42,13 +42,13 @@ load_options.post_init(model, model.xml_path)
 
 # parameter normalisation
 h_0_norm = Constant(10.0)
-model.x_N_norm.assign(Constant(100.0))
+model.x_N_norm.assign(Constant(1000000.0))
 
 # define model stopping criteria
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
 x_N_start = split(model.w['ic'])[4]
 model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
-                   (Constant(1.0) + erf(Constant(1e6)*(phi_int*x_N/x_N_start-Constant(0.05))))
+                   (Constant(1.0) + erf(Constant(1e6)/(model.model_norm)**0.5*(phi_int*x_N/x_N_start-Constant(0.05))))
                    )
 
 # define beta as form function of h_0
@@ -121,7 +121,7 @@ if method == "TT":
   notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
   notice.show()
 
-if method == "OS":# or method == "TT":
+if method == "OS" or method == "TT":
   q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
   v = TestFunction(model.V)
   J_proj = Function(model.V, name='functional')

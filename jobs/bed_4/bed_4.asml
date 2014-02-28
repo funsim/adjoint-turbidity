@@ -19,7 +19,9 @@
       <real_value rank="0">100000.0</real_value>
     </finish_time>
   </time_options>
-  <output_options/>
+  <output_options>
+    <ts_info/>
+  </output_options>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>
@@ -32,7 +34,7 @@
         <string_value type="code" lines="20" language="python">model.model_norm</string_value>
         <additional_form_var>
           <var name="model_norm">
-            <string_value type="code" lines="20" language="python">model.model_norm = Constant(1e3)</string_value>
+            <string_value type="code" lines="20" language="python">model.model_norm = Constant(1e6)</string_value>
           </var>
         </additional_form_var>
       </form>
