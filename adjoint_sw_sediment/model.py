@@ -140,6 +140,9 @@ class Model():
         for i, form_ic in enumerate(self.form_ic):
             F += inner(test[i], w[i])*dx
             if form_ic.has_key('form'):
+                # reset function
+                form_ic['function'].assign(Constant((0.0)))
+                # write ic
                 solve(form_ic['test_function']*form_ic['form']*dx - 
                       form_ic['test_function']*form_ic['function']*dx == 0, 
                       form_ic['function']) 

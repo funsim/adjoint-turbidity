@@ -42,7 +42,7 @@ load_options.post_init(model, model.xml_path)
 
 # parameter normalisation
 h_0_norm = Constant(10.0)
-model.x_N_norm.assign(Constant(1000000.0))
+model.x_N_norm.assign(Constant(1.0))
 
 # define model stopping criteria
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
@@ -116,7 +116,7 @@ if method == "TT":
                               np.array([model.x_N_ic.vector().array()[0], 
                                         model.h_0.vector().array()[0]]),
                               perturbation_direction = np.array([1.0,0.0]),
-                              seed = 8e-3)
+                              seed = 1e-2)
   pynotify.init("Test")
   notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
   notice.show()
