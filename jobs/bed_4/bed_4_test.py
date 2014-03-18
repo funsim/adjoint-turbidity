@@ -22,7 +22,7 @@ set_log_level(ERROR)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 450:  
+  if model.t_step > 400: #700:  
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -48,7 +48,7 @@ model.x_N_norm.assign(Constant(1.0))
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
 x_N_start = split(model.w['ic'])[4]
 model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
-                   (Constant(1.0) + erf(Constant(1e6)/(model.model_norm)**0.5*(phi_int*x_N/x_N_start-Constant(0.05))))
+                   (Constant(1.0) + erf(Constant(1e6)/model.model_norm**0.5*(phi_int*x_N/x_N_start-Constant(0.05))))
                    )
 
 # define beta as form function of h_0
@@ -65,7 +65,7 @@ model.generate_form()
 v = TestFunction(model.R)
 
 model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
-model.x_N_ic.assign( Constant( 1.0/model.x_N_norm((0,0)) ) )
+model.x_N_ic.assign( Constant( 0.25/model.x_N_norm((0,0)) ) )
 parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
@@ -102,8 +102,8 @@ rf = MyReducedFunctional(model, J, parameters,
 ################################## 
 if method == "OS":
   rf.autoscale = False
-  rf.compute_functional_mem(np.array([2.1837727883,
-                                      1.5987446258]))
+  rf.compute_functional_mem(np.array([model.x_N_ic.vector().array()[0], 
+                                      model.h_0.vector().array()[0]]))
 
 ################################## 
 # TAYLOR TEST
