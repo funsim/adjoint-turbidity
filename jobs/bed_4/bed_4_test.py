@@ -22,7 +22,7 @@ set_log_level(ERROR)
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 400: #700:  
+  if model.t_step > 429: #700:  
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -91,7 +91,7 @@ diff = phi_d - non_dim_t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "TT" #"L-BFGS-B"
+method = "OS" #"L-BFGS-B"
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
                          prep_target_cb = prep_target_cb,

@@ -69,7 +69,7 @@ class Plotter():
         self.fig.subplots_adjust(left = 0.15, wspace = 0.3, hspace = 0.3) 
 
         try: beta = model.beta.vector().array()[0]
-        except: beta = False
+        except: beta = True
         if beta:
             self.q_plot = self.fig.add_subplot(221)
             self.h_plot = self.fig.add_subplot(222)
@@ -91,7 +91,7 @@ class Plotter():
         self.title.set_text(timestep_info_string(model, True))
 
         try: beta = model.beta.vector().array()[0]
-        except: beta = False
+        except: beta = True
         
         self.q_plot.clear()
         self.h_plot.clear()
@@ -306,9 +306,6 @@ def timestep_info_string(model, tex=False):
     n_ele = len(model.mesh.cells())
     y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh) 
     x_N_start = map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
-
-    try: beta = model.beta.vector().array()[0]
-    except: beta = False
 
     if tex:
       return ("$t$ = {0:.2e}, $dt$ = {1:.2e}: ".format(model.t, k) +
