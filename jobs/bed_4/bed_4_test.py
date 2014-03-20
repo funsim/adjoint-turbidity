@@ -27,19 +27,19 @@ set_log_level(ERROR)
 # MODEL SETUP
 ################################## 
 
-end = eval(sys.argv[1])
+end = 260 #eval(sys.argv[1])
 
 # define end criteria
 def end_criteria(model):      
   if model.t_step > end: #700:  
-    # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
-    #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-    # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
-    # phi_int_s = phi_int*x_N/x_N_start
-    # if phi_int_s > 0.05:
-    #   info_red("ERROR: stopping criteria not reached in alloted timesteps")
-    #   info_red("phi_int was %f"%phi_int_s)
-    #   sys.exit()
+    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
+        input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
+    x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
+    phi_int_s = phi_int*x_N/x_N_start
+    if phi_int_s > 0.05:
+      info_red("ERROR: stopping criteria not reached in alloted timesteps")
+      info_red("phi_int was %f"%phi_int_s)
+      sys.exit()
     return True
   return False
 

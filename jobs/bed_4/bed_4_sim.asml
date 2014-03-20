@@ -22,9 +22,7 @@
       <real_value rank="0">100000.0</real_value>
     </finish_time>
   </time_options>
-  <output_options>
-    <ts_info/>
-  </output_options>
+  <output_options/>
   <spatial_discretisation>
     <discretisation name="discontinuous"/>
   </spatial_discretisation>
