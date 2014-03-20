@@ -54,7 +54,7 @@ class Plotter():
         self.h_0 = h_0
         self.phi_0 = phi_0
 
-        print g, h_0, phi_0
+        # print g, h_0, phi_0
 
         if model.show_plot:
             plt.ion()

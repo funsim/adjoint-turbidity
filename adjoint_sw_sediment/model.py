@@ -25,9 +25,13 @@ dolfin.parameters["optimization"]["test_gradient"] = False
 dolfin.parameters["optimization"]["test_gradient_seed"] = 0.1
 solver_parameters = {}
 solver_parameters["newton_solver"] = {}
-solver_parameters["newton_solver"]["maximum_iterations"] = 15
-solver_parameters["newton_solver"]["relaxation_parameter"] = 1.0
+solver_parameters["newton_solver"]["linear_solver"] = "lu"
+# solver_parameters["newton_solver"]["absolute_tolerance"] = 1E-14
+# solver_parameters["newton_solver"]["relative_tolerance"] = 1E-13
+# solver_parameters["newton_solver"]["maximum_iterations"] = 1000
 info(parameters, False)
+info(NonlinearVariationalSolver.default_parameters(), False)
+# sys.exit()
 set_log_level(ERROR)
 
 class Model():
@@ -145,7 +149,7 @@ class Model():
                 # write ic
                 solve(form_ic['test_function']*form_ic['form']*dx - 
                       form_ic['test_function']*form_ic['function']*dx == 0, 
-                      form_ic['function']) 
+                      form_ic['function'], solver_parameters=solver_parameters) 
                 F -= inner(test[i], form_ic['function'])*dx
             else:
                 if i < 7:
@@ -153,7 +157,7 @@ class Model():
                 else:
                     F -= inner(test[i], w[2])*dx
 
-        solve(F == 0, self.w[0])
+        solve(F == 0, self.w[0], solver_parameters=solver_parameters)
         self.w[1].assign(self.w[0])
         self.w['int'].assign(self.w[0])
         self.w['td'].assign(self.w[0])
@@ -273,7 +277,7 @@ class Model():
         
         # initialise plotting
         if self.plot:
-            print self.g, self.h_0, self.phi_0
+            # print self.g, self.h_0, self.phi_0
             self.plotter = io.Plotter(self, rescale=True, file=self.project_name, 
                                       similarity = self.similarity, dam_break = self.dam_break, 
                                       g = self.g.vector().array()[0], h_0 = self.h_0.vector().array()[0],
@@ -304,21 +308,25 @@ class Model():
                 self.w['int'].assign(self.w[1])
 
                 self.w['td'].assign(self.w[1])
-                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, 
+                      solver_parameters=solver_parameters, bcs=self.bc)
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, bcs=self.bc)
+                solve(self.F_rk == 0, self.w['int'], J=self.J_rk, 
+                      solver_parameters=solver_parameters, bcs=self.bc)
                 if self.slope_limit:
                     slope_limit(self.w['int'], annotate=annotate)
 
                 self.w['td'].assign(self.w['int'])
-                solve(self.F == 0, self.w[0], J=self.J, bcs=self.bc)
+                solve(self.F == 0, self.w[0], J=self.J, 
+                      solver_parameters=solver_parameters, bcs=self.bc)
 
             else:
 
-                solve(self.F == 0, self.w[0], J=self.J, solver_parameters=solver_parameters, bcs=self.bc)
+                solve(self.F == 0, self.w[0], J=self.J, 
+                      solver_parameters=solver_parameters, bcs=self.bc)
                 
             if self.slope_limit:
                 slope_limit(self.w[0], annotate=annotate)

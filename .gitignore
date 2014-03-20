@@ -4,5 +4,6 @@
 *.dat
 *.png
 *.pckl
+*.log
 results
 ffc_form*

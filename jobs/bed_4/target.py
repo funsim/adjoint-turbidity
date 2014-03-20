@@ -28,9 +28,9 @@ def gen_target(model, h_0_norm):
   target = 0
   q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
   for i, c in enumerate(ec_coeff):
-    target += model.model_norm*c*pow(model.y*x_N*model.h_0*h_0_norm*0.25/model.model_norm, i)
+    target += c*pow(model.y*x_N*model.h_0*h_0_norm*0.25, i)
 
-  return equation.smooth_pos(target, eps=1e-0*model.model_norm)
+  return equation.smooth_pos(target, eps=1e-0)
 
 def plot_functions(model, fns):
   from matplotlib import pyplot as plt

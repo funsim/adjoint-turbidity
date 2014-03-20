@@ -12,22 +12,14 @@
     <time_discretisation name="runge_kutta"/>
     <adaptive_timestep>
       <cfl_criteria>
-        <real_value rank="0">0.2</real_value>
+        <real_value rank="0">0.1</real_value>
       </cfl_criteria>
     </adaptive_timestep>
     <finish_time>
       <real_value rank="0">100000.0</real_value>
     </finish_time>
   </time_options>
-  <output_options>
-    <plotting>
-      <plotting_interval>
-        <real_value rank="0">0.5</real_value>
-      </plotting_interval>
-      <output name="save_plots"/>
-    </plotting>
-    <ts_info/>
-  </output_options>
+  <output_options/>
   <spatial_discretisation>
     <discretisation name="discontinuous">
       <slope_limit/>

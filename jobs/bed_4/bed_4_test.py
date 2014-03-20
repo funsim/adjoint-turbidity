@@ -14,15 +14,24 @@ import pynotify
 # hack!!
 sys.setrecursionlimit(100000)
 
+solver_parameters = {}
+solver_parameters["newton_solver"] = {}
+solver_parameters["newton_solver"]["linear_solver"] = "lu"
+# solver_parameters["newton_solver"]["absolute_tolerance"] = 1E-14
+# solver_parameters["newton_solver"]["relative_tolerance"] = 1E-13
+# solver_parameters["newton_solver"]["maximum_iterations"] = 1000
+
 set_log_level(ERROR)
 
 ################################## 
 # MODEL SETUP
 ################################## 
 
+end = eval(sys.argv[1])
+
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > 429: #700:  
+  if model.t_step > end: #700:  
     # y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
     #     input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     # x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -31,12 +40,11 @@ def end_criteria(model):
     #   info_red("ERROR: stopping criteria not reached in alloted timesteps")
     #   info_red("phi_int was %f"%phi_int_s)
     #   sys.exit()
-    print model.t
     return True
   return False
 
 # load model
-model = Model('bed_4.asml', end_criteria = end_criteria, no_init=True)
+model = Model('bed_4_sim.asml', end_criteria = end_criteria, no_init=True)
 model.initialise_function_spaces()
 load_options.post_init(model, model.xml_path)
 
@@ -47,8 +55,11 @@ model.x_N_norm.assign(Constant(1.0))
 # define model stopping criteria
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
 x_N_start = split(model.w['ic'])[4]
+# model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
+#                    (Constant(1.0) + erf(Constant(1e6)/model.model_norm**0.5*(phi_int*x_N/x_N_start-Constant(0.05))))
+#                    )
 model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
-                   (Constant(1.0) + erf(Constant(1e6)/model.model_norm**0.5*(phi_int*x_N/x_N_start-Constant(0.05))))
+                   (Constant(1.0) + erf(Constant(1e6)*(phi_int*x_N/x_N_start-Constant(0.05))))
                    )
 
 # define beta as form function of h_0
@@ -82,8 +93,8 @@ phi_d_int = Function(model.R)
 t_int_F = v*t_int*dx - v*t*dx 
 phi_d_int_F = v*phi_d_int*dx - v*phi_d*dx
 def prep_target_cb(model):
-  solve(t_int_F == 0, t_int)
-  solve(phi_d_int_F == 0, phi_d_int)
+  solve(t_int_F == 0, t_int, solver_parameters=solver_parameters)
+  solve(phi_d_int_F == 0, phi_d_int, solver_parameters=solver_parameters)
 
 # define functional 
 non_dim_t = (phi_d_int/t_int)*t
@@ -91,7 +102,7 @@ diff = phi_d - non_dim_t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "OS" #"L-BFGS-B"
+method = "TT" #"L-BFGS-B"
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
                          prep_target_cb = prep_target_cb,
@@ -116,12 +127,12 @@ if method == "TT":
                               np.array([model.x_N_ic.vector().array()[0], 
                                         model.h_0.vector().array()[0]]),
                               perturbation_direction = np.array([1.0,0.0]),
-                              seed = 1e-2)
+                              seed = 1e-2, log_file="%d_sim.log"%end)
   pynotify.init("Test")
   notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
   notice.show()
 
-if method == "OS" or method == "TT":
+if method == "OS": # or method == "TT":
   q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
   v = TestFunction(model.V)
   J_proj = Function(model.V, name='functional')
