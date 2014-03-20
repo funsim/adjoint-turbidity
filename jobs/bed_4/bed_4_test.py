@@ -49,7 +49,7 @@ model.initialise_function_spaces()
 load_options.post_init(model, model.xml_path)
 
 # parameter normalisation
-h_0_norm = Constant(10.0)
+h_0_norm = Constant(1000.0)
 model.x_N_norm.assign(Constant(1.0))
 
 # define model stopping criteria
