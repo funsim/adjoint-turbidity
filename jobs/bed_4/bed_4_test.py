@@ -76,7 +76,7 @@ model.generate_form()
 v = TestFunction(model.R)
 
 model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
-model.x_N_ic.assign( Constant( 0.25/model.x_N_norm((0,0)) ) )
+model.x_N_ic.assign( Constant( 1.0/model.x_N_norm((0,0)) ) )
 parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
@@ -102,7 +102,7 @@ diff = phi_d - non_dim_t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "TT" #"L-BFGS-B"
+method = "L-BFGS-B"
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
                          prep_target_cb = prep_target_cb,
