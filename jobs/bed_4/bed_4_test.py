@@ -27,7 +27,7 @@ set_log_level(ERROR)
 # MODEL SETUP
 ################################## 
 
-end = 260 #eval(sys.argv[1])
+end = 300 #eval(sys.argv[1])
 
 # define end criteria
 def end_criteria(model):      
@@ -75,8 +75,8 @@ model.generate_form()
 ################################## 
 v = TestFunction(model.R)
 
-model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
-model.x_N_ic.assign( Constant( 1.0/model.x_N_norm((0,0)) ) )
+model.h_0.assign( Constant( 1311/h_0_norm((0,0)) ) )
+model.x_N_ic.assign( Constant( 1.236/model.x_N_norm((0,0)) ) )
 parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
@@ -97,12 +97,14 @@ def prep_target_cb(model):
   solve(phi_d_int_F == 0, phi_d_int, solver_parameters=solver_parameters)
 
 # define functional 
-non_dim_t = (phi_d_int/t_int)*t
-diff = phi_d - non_dim_t
+# non_dim_t = (phi_d_int/t_int)*t
+# diff = phi_d - non_dim_t
+dim_phi_d = (t_int/phi_d_int)*phi_d
+diff = dim_phi_d - t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "L-BFGS-B"
+method = "OS"
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
                          prep_target_cb = prep_target_cb,
@@ -127,7 +129,7 @@ if method == "TT":
                               np.array([model.x_N_ic.vector().array()[0], 
                                         model.h_0.vector().array()[0]]),
                               perturbation_direction = np.array([1.0,0.0]),
-                              seed = 1e-2, log_file="%d_sim.log"%end)
+                              seed = 1e-11, log_file="%d_sim.log"%end)
   pynotify.init("Test")
   notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
   notice.show()
@@ -138,10 +140,13 @@ if method == "OS": # or method == "TT":
   J_proj = Function(model.V, name='functional')
   solve(v*diff*dx - v*J_proj*dx == 0, J_proj)
   phi_d_proj = Function(model.V, name='phi d')
-  solve(v*phi_d*dx - v*phi_d_proj*dx == 0, phi_d_proj)
+  # solve(v*phi_d*dx - v*phi_d_proj*dx == 0, phi_d_proj)
+  solve(v*dim_phi_d*dx - v*phi_d_proj*dx == 0, phi_d_proj)
   t_proj = Function(model.V, name='target')
-  solve(v*non_dim_t*dx - v*t_proj*dx == 0, t_proj)
+  # solve(v*non_dim_t*dx - v*t_proj*dx == 0, t_proj)
+  solve(v*t*dx - v*t_proj*dx == 0, t_proj)
   target.plot_functions(model, [J_proj, phi_d_proj, t_proj])
+  info_green("Fn = %f"%assemble(J_integral*dx))
 
 ################################## 
 # OPTIMISE 
@@ -151,7 +156,7 @@ bnds =   (
     0.25, 100/h_0_norm((0,0))
     ), 
   ( 
-    4.0, 4000/h_0_norm((0,0))
+    20.0, 4000/h_0_norm((0,0))
     )
   )
 

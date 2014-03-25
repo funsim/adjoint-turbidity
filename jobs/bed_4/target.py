@@ -4,8 +4,37 @@ from adjoint_sw_sediment import *
 import numpy as np
 
 # raw data
-phi_d_x = np.array([100,2209.9255583127,6917.3697270472,10792.3076923077,16317.1215880893,20070.9677419355,24657.3200992556,29016.6253101737,32013.6476426799,35252.8535980149,37069.2307692308,39718.1141439206,44410.4218362283,50041.1910669975,54900,79310,82770.0576368876,86477.2622478386,89875.5331412104,97907.8097982709,105013.285302594,112180.547550432,118019.39481268,128461.354466859,132910])
-phi_d_y = np.array([1,1.01,0.98,0.95,0.86,1.13,0.99,1.37,1.42,1.19,1.02,1.05,0.85,0.63,0.74,0.5079365079,0.4761904762,0.4285714286,0.4603174603,0.5714285714,0.7619047619,0.6031746032,0.4285714286,0.3015873016,0.2380952381])
+data = np.array([[  0.00000000e+00,   3.51807229e-01],
+                 [  3.90773406e+03,   2.55421687e-01],
+                 [  5.04748982e+03,   5.34939759e-01],
+                 [  1.25373134e+04,   6.98795181e-01],
+                 [  1.77476255e+04,   8.53012048e-01],
+                 [  2.37720488e+04,   6.89156627e-01],
+                 [  2.97964722e+04,   4.72289157e-01],
+                 [  3.64721845e+04,   3.22891566e-01],
+                 [  3.94029851e+04,   3.22891566e-01],
+                 [  4.07055631e+04,   2.89156627e-01],
+                 [  4.23337856e+04,   3.13253012e-01],
+                 [  4.47761194e+04,   2.65060241e-01],
+                 [  6.48032564e+04,   1.92771084e-01],
+                 [  6.64314790e+04,   2.79518072e-01],
+                 [  7.13161465e+04,   1.68674699e-01],
+                 [  7.71777476e+04,   1.49397590e-01],
+                 [  7.92944369e+04,   1.06024096e-01],
+                 [  8.22252374e+04,   1.54216867e-01],
+                 [  8.67842605e+04,   9.63855422e-02],
+                 [  9.36227951e+04,   1.87951807e-01],
+                 [  9.81818182e+04,   8.67469880e-02],
+                 [  1.03066486e+05,   5.30120482e-02],
+                 [  1.06160109e+05,   9.15662651e-02],
+                 [  1.06974220e+05,   9.63855422e-02],
+                 [  1.08765265e+05,   1.44578313e-01],
+                 [  1.12510176e+05,   1.34939759e-01],
+                 [  1.17883311e+05,   8.19277108e-02],
+                 [  1.19837178e+05,   1.34939759e-01],
+                 [  1.20488467e+05,   1.25301205e-01]])
+phi_d_x = data[:,0]
+phi_d_y = data[:,1]
 
 # get linear coefficients
 def fit(n_coeff):
@@ -28,9 +57,9 @@ def gen_target(model, h_0_norm):
   target = 0
   q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
   for i, c in enumerate(ec_coeff):
-    target += c*pow(model.y*x_N*model.h_0*h_0_norm*0.25, i)
+    target += c*pow(model.y*x_N*model.h_0*h_0_norm, i)
 
-  return equation.smooth_pos(target, eps=1e-0)
+  return equation.smooth_pos(target, eps=1e-3)
 
 def plot_functions(model, fns):
   from matplotlib import pyplot as plt
@@ -44,46 +73,44 @@ def plot_functions(model, fns):
 if __name__=='__main__':
   from matplotlib import pyplot as plt
 
-  l = 120000
-
   mesh = IntervalMesh(20, 0.0, 1.0)
   fs = FunctionSpace(mesh, 'CG', 1)
   y = project(Expression('x[0]'), fs)
 
-  x_N = Constant(199.846619411*1.0932433*1000)
+  x_N = Constant(200000)
 
   depth_fn = 0
-  ec_coeff = fit(2)
+  import sys
+  ec_coeff = fit(eval(sys.argv[1]))
   for i, c in enumerate(ec_coeff):
-    depth_fn += c*(y)**i
+    depth_fn += c*(y*x_N)**i
   d = Function(fs)
   v = TestFunction(fs)
-  solve(v*depth_fn*dx - v*d*dx == 0, d)
+  solve(v*equation.smooth_pos(depth_fn, eps=1e-3)*dx - v*d*dx == 0, d)
 
-  # x = np.linspace(0,l,21)
-  # d_2 = np.zeros(x.shape)
-  # for i, x_ in enumerate(x):
-  #   for pow, c in enumerate(ec_coeff):
-  #     d_2[i] += c*x_**pow
+  fn = d*x_N*dx
+  print assemble(fn)
+
+  x = np.linspace(0,x_N((0,0)),21)
+  d_2 = np.zeros(x.shape)
+  for j, x_ in enumerate(x):
+    for i, c in enumerate(ec_coeff):
+      d_2[j] += c*(x_)**i
 
   # filt = e**-(smooth_pos(y*l - (phi_d_x[-1] + 100)))
   # f = Function(fs)
   # solve(v*filt*dx - v*f*dx == 0, f)
 
-  fd = Function(fs)
-  solve(v*depth_fn*dx - v*fd*dx == 0, fd)
+  # fd = Function(fs)
+  # solve(v*depth_fn*dx - v*fd*dx == 0, fd)
 
-  # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-  #          input_output.map_function_to_array(d, mesh))
-  plt.plot(input_output.map_function_to_array(y, mesh), 
-           input_output.map_function_to_array(fd, mesh))
+  plt.plot(input_output.map_function_to_array(y, mesh)*x_N((0,0)), 
+           input_output.map_function_to_array(d, mesh), label='fn')
 
-  # plt.plot(input_output.map_function_to_array(y, mesh)*l, 
-  #          input_output.map_function_to_array(f, mesh))
+  plt.plot(x, d_2, label='expr')
 
-  # plt.plot(phi_d_x, phi_d_y)
+  plt.plot(phi_d_x, phi_d_y, label='data')
 
-  # plt.plot(x, d_2)
-  # plt.ylim(0,1.2)
+  plt.ylim(-0.1,1.0)
 
   plt.show()
