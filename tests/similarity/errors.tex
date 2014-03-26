@@ -1,0 +1,82 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\tikzset{mark size=2.0}
+\pgfplotsset{every axis/.append style={line width=0.5pt}}\pgfplotsset{every axis legend/.append style={
+font=\tiny,
+at={(1.01,1.0)},
+anchor=north west}}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+xmode=log,
+ymode=log,
+xlabel={element size},
+ylabel={error},
+grid=none,
+enlargelimits=true,
+cycle multi list={
+solid,dashed\nextlist
+blue,red,green!60!black,orange,purple!60!black,gray,black,green
+},
+axis background/.style={fill=white},
+small,
+width=12cm,
+]
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_q};
+\addlegendentry{$\epsilon_q$}
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_h};
+\addlegendentry{$\epsilon_h$}
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_phi};
+\addlegendentry{$\epsilon_\phi$}
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{x_N}};
+\addlegendentry{$\epsilon_{x_N}$}
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{dot{x}_N}};
+\addlegendentry{$\epsilon_{\dot{x}_N}$}
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/order 2};
+\addlegendentry{order $2$}
+\end{axis}
+\end{tikzpicture}
+\end{document}

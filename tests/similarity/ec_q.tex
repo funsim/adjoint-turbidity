@@ -1,0 +1,46 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\tikzset{mark size=2.0}
+\pgfplotsset{every axis/.append style={line width=0.5pt}}\pgfplotsset{every axis legend/.append style={
+font=\tiny,
+at={(1.01,1.0)},
+anchor=north west}}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+xmode=normal,
+ymode=normal,
+xlabel={$x$},
+ylabel={$q$},
+grid=none,
+enlargelimits=true,
+cycle multi list={
+solid,dashed\nextlist
+blue,red,green!60!black,orange,purple!60!black,gray,black,green
+},
+axis background/.style={fill=white},
+small,
+width=12cm,
+]
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/ec_q.data/1.00e-01};
+\addlegendentry{$1.00e-01$}
+\addplot+[,
+error bars/.cd,
+x dir=both,x explicit,
+y dir=both,y explicit,
+,
+,
+]
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/ec_q.data/5.00e-02};
+\addlegendentry{$5.00e-02$}
+\end{axis}
+\end{tikzpicture}
+\end{document}
