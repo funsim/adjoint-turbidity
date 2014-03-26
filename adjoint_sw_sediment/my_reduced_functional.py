@@ -55,10 +55,6 @@ class MyReducedFunctional(ReducedFunctional):
         def compute_functional(m, annotate = True):
             '''run forward model and compute functional'''
 
-            # store ic
-            self.results['id'] += 1
-            self.results['ic'] = to_tuple(m)
-
             # reset dolfin-adjoint
             adj_reset()
             parameters["adjoint"]["record_all"] = True 
@@ -108,8 +104,6 @@ class MyReducedFunctional(ReducedFunctional):
                         param.parameter.assign(Constant(param.value/assemble(param.term)))
             j += assemble(f)
 
-            self.results['j'] = j
-
             self.first_run = False
             return j * self.scale
 
@@ -145,6 +139,10 @@ class MyReducedFunctional(ReducedFunctional):
         memoizable_m = [val.vector().array() for val in m]
         self.last_m = memoizable_m
         info_green('Input values: %s', str(['%+010.7e'%m[0] for m in memoizable_m]))
+
+        # store ic
+        self.results['id'] += 1
+        self.results['ic'] = to_tuple(memoizable_m)
         
         info_blue('Start evaluation of j')
         timer = dolfin.Timer("j evaluation") 
@@ -164,6 +162,9 @@ class MyReducedFunctional(ReducedFunctional):
             j = self.auto_scale*j
           else:
             j = self.auto_scale*j
+
+        # store j
+        self.results['j'] = j
 
         info_green('Functional value: %e'%j)
 

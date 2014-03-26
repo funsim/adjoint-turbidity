@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import matplotlib.pyplot as plt
 from dolfin import *
 import numpy as np
-import json
+import json, pickle
 
 import matplotlib as mpl
 from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
@@ -270,39 +270,14 @@ class Adjoint_Plotter():
     def clean_up(self):
         plt.close()
 
-def clear_model_files(file):
-
-    files = [file + '_q.json',
-             file + '_h.json',
-             file + '_phi.json',
-             file + '_phi_d.json',
-             file + '_x_N.json',
-             file + '_u_N.json',
-             file + '_T.json']
-
-    for file in files:
-        f = open(file, 'w')
-        f.write('')
-        f.close()
-
-def write_model_to_files(model, method, file):
-
-    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh)    
-
-    write_array_to_file(file + '_q.json', q, method)
-    write_array_to_file(file + '_h.json', h, method)
-    write_array_to_file(file + '_phi.json', phi, method)
-    write_array_to_file(file + '_phi_d.json', phi_d, method)
-    write_array_to_file(file + '_x_N.json', x_N, method)
-    write_array_to_file(file + '_u_N.json', u_N, method)
-    write_array_to_file(file + '_T.json', [model.t], method)
+def pickle_model(model, file):
+    model_arrays = map_to_arrays(model.w[0], model.y, model.mesh)
+    pickle.dump(model_arrays, open(file, 'w'))
 
 def print_timestep_info(model):
-    
     info_green("END OF TIMESTEP " + timestep_info_string(model))
 
 def timestep_info_string(model, tex=False):
-
     n_ele = len(model.mesh.cells())
     y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh) 
     x_N_start = map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -347,7 +322,6 @@ def map_to_arrays(w, x, mesh):
             np.array(phi_d).flatten(), x_N, u_N, k, phi_int)
 
 def map_function_to_array(f, mesh):
-
     arr = f.vector().array()
     n_ele = len(mesh.cells())
 
@@ -389,19 +363,6 @@ def write_array_to_file(fname, arrs, method):
             f.write(json.dumps(list(arr)))
         except:
             f.write(json.dumps(arr))
-        f.write('\n')
-    f.close()
-
-def read_q_vals_from_file(fname):
-    f = open(fname, 'r')
-    q_a, q_pa, q_pb = json.loads(f.readline())
-    f.close()
-    return q_a, q_pa, q_pb
-
-def write_q_vals_to_file(fname, q_a, q_pa, q_pb, method):
-    f = open(fname, method)
-    f.write(json.dumps([q_a, q_pa, q_pb]))
-    if method == 'a':
         f.write('\n')
     f.close()
 

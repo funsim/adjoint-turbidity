@@ -46,9 +46,6 @@ class Model():
         self.xml_path = xml_path
         load_options.pre_init(self, self.xml_path)
 
-        ### options that aren't handled in the diamond options file ###
-        # output data
-        self.write = None
         # error calculation
         self.error_callback = error_callback
 
@@ -284,12 +281,6 @@ class Model():
                                       phi_0 = self.phi_0.vector().array()[0])
             self.plot_t = self.t + self.plot
 
-        # write ic's
-        if self.write:
-            io.clear_model_files(file=self.save_loc)
-            io.write_model_to_files(self, 'a', file=self.project_name)
-            self.write_t = self.write
-
         while not (self.end_criteria(self)):
 
             # M = assemble(self.J)
@@ -343,12 +334,6 @@ class Model():
                 if self.t > self.plot_t:
                     self.plotter.update_plot(self)
                     self.plot_t += self.plot
-
-            # save data
-            if self.write:
-                if self.t > self.write_t:
-                    io.write_model_to_files(self, 'a', file=self.save_loc)
-                    self.write_t += self.write
 
             # write timestep info
             if self.ts_info == True:

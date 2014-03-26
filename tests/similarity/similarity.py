@@ -30,7 +30,7 @@ parameters["adjoint"]["stop_annotating"] = True
 # create model
 model = Model('similarity.asml', error_callback=getError, no_init=True)
 
-nx = np.array([int(x) for x in np.linspace(10, 16, 4)])
+nx = np.array([int(x) for x in np.linspace(10, 20, 6)])
 h = 1.0/nx
 
 # info_red('crank nicholson')
@@ -63,14 +63,23 @@ for i in range(len(h)):
     info_blue('N_cells:{:2}'.format(nx[i]))
     model.ele_count = nx[i]
     model.initialise()
-    E[:, i] = model.run(annotate=False)
+    model.set_ic()
+    input_output.pickle_model(model, "%.2e_ic.pckl"%h[i])
+    E[:, i] = model.solve(annotate=False)
+    input_output.pickle_model(model, "%.2e_ec.pckl"%h[i])
     
     if i > 0:
         r2[:, i] = np.log(E[:, i]/E[:, i-1])/np.log(h[i]/h[i - 1])
         
 print ''
+print E
+print ''    
+print ''
 print r2
 print ''
 
-assert((r1[:,1:] > 1.75).all())
+import pickle
+pickle.dump([h, E], open("results.pckl", "w"))
+
+# assert((r1[:,1:] > 1.75).all())
 assert((r2[:,1:] > 1.75).all())

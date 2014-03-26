@@ -7,3 +7,9 @@
 *.log
 results
 ffc_form*
+
+# latex
+*.aux
+*.data
+auto
+pdflatex_log
