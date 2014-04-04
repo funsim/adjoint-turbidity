@@ -1,0 +1,31 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usetikzlibrary{calc}
+\pgfplotsset{compat=newest}
+\pgfplotsset{every axis/.append style={line width=0.5pt}}
+\tikzset{mark size=1.0}
+\begin{document}
+\begin{tikzpicture}
+\begin{semilogyaxis}[
+scaled ticks=false,
+enlargelimits=false,
+xlabel=iteration, ylabel=$J$
+]
+\addplot[dashed, mark=*, mark options=solid] table[x=i,y=j] {
+i j
+0 0.0233725866569
+1 0.0121243940719
+2 0.00146752450756
+3 0.000241281120278
+4 0.000151674830368
+5 9.23214354488e-05
+6 9.15814542309e-05
+7 9.15649911682e-05
+8 9.15217775294e-05
+9 9.14090562176e-05
+10 9.11702905362e-05
+};
+\end{semilogyaxis}
+\end{tikzpicture}
+\end{document}

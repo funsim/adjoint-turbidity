@@ -17,9 +17,6 @@ sys.setrecursionlimit(100000)
 solver_parameters = {}
 solver_parameters["newton_solver"] = {}
 solver_parameters["newton_solver"]["linear_solver"] = "lu"
-# solver_parameters["newton_solver"]["absolute_tolerance"] = 1E-14
-# solver_parameters["newton_solver"]["relative_tolerance"] = 1E-13
-# solver_parameters["newton_solver"]["maximum_iterations"] = 1000
 
 set_log_level(ERROR)
 
@@ -31,7 +28,7 @@ end = 300 #eval(sys.argv[1])
 
 # define end criteria
 def end_criteria(model):      
-  if model.t_step > end: #700:  
+  if model.t_step > end:  
     y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
         input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
     x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
@@ -51,21 +48,20 @@ load_options.post_init(model, model.xml_path)
 # parameter normalisation
 h_0_norm = Constant(1000.0)
 model.x_N_norm.assign(Constant(1.0))
+phi_0_norm = Constant(0.01)
+phi_0 = Function(model.R, name="phi_0")
 
 # define model stopping criteria
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
 x_N_start = split(model.w['ic'])[4]
-# model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
-#                    (Constant(1.0) + erf(Constant(1e6)/model.model_norm**0.5*(phi_int*x_N/x_N_start-Constant(0.05))))
-#                    )
 model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
                    (Constant(1.0) + erf(Constant(1e6)*(phi_int*x_N/x_N_start-Constant(0.05))))
                    )
 
 # define beta as form function of h_0
 D = 2.5e-4
-Re_p = Constant(D**2/(18*1e-6))
-model.beta = model.g*Re_p/(model.g*model.h_0*h_0_norm)**0.5
+model.beta = Constant(2./(9.*1e-6)) * \
+    (D**2.0/(model.h_0*h_0_norm*phi_0*phi_0_norm)**0.5)
 
 # generate form
 model.generate_form()
@@ -75,39 +71,33 @@ model.generate_form()
 ################################## 
 v = TestFunction(model.R)
 
-model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
+# define parameters
 model.x_N_ic.assign( Constant( 1/model.x_N_norm((0,0)) ) )
-parameters = [InitialConditionParameter(model.x_N_ic), InitialConditionParameter(model.h_0)]
+model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
+phi_0.assign( Constant( 0.01/phi_0_norm((0,0)) ) )
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
 junk = project(model.h_0, model.R)
+junk = project(phi_0, model.R)
+# create list
+parameters = [InitialConditionParameter(model.x_N_ic), 
+              InitialConditionParameter(model.h_0), 
+              InitialConditionParameter(phi_0)]
 
 # target deposit
 t = target.gen_target(model, h_0_norm)
 
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
 
-# scaling to remove phi_0
-t_int = Function(model.R)
-phi_d_int = Function(model.R)
-t_int_F = v*t_int*dx - v*t*dx 
-phi_d_int_F = v*phi_d_int*dx - v*phi_d*dx
-def prep_target_cb(model):
-  solve(t_int_F == 0, t_int, solver_parameters=solver_parameters)
-  solve(phi_d_int_F == 0, phi_d_int, solver_parameters=solver_parameters)
-
-# define functional 
-# non_dim_t = (phi_d_int/t_int)*t
-# diff = phi_d - non_dim_t
-dim_phi_d = (t_int/phi_d_int)*phi_d
+dim_phi_d = phi_0*phi_0_norm*model.h_0*h_0_norm*phi_d
 diff = dim_phi_d - t
 J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "L-BFGS-B"
+method = "IPOPT"
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
-                         prep_target_cb = prep_target_cb,
+                         # prep_target_cb = prep_target_cb,
                          method = method)  
 
 ################################## 
@@ -127,8 +117,9 @@ if method == "TT":
   helpers.test_gradient_array(rf.compute_functional_mem, 
                               rf.compute_gradient_mem,
                               np.array([model.x_N_ic.vector().array()[0], 
-                                        model.h_0.vector().array()[0]]),
-                              perturbation_direction = np.array([1.0,0.0]),
+                                        model.h_0.vector().array()[0], 
+                                        phi_0.vector().array()[0]]),
+                              # perturbation_direction = np.array([1.0,0.0]),
                               seed = 1e-11, log_file="%d_sim.log"%end)
   pynotify.init("Test")
   notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
@@ -164,10 +155,10 @@ if method == "OS": # or method == "TT":
 ################################## 
 bnds =   (
   ( 
-    0.25, 100/h_0_norm((0,0))
+    0.25/model.x_N_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
     ), 
   ( 
-    20.0, 4000/h_0_norm((0,0))
+    20.0/model.x_N_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
     )
   )
 
@@ -176,6 +167,7 @@ bnds =   (
 ################################## 
 if method == "L-BFGS-B":
   m_opt = minimize(rf, method = "L-BFGS-B", 
+                   tol=1e-4,  
                    options = {'disp': True }, 
                    bounds = bnds,
                    in_euclidian_space = False) 

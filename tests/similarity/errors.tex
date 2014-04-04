@@ -4,8 +4,8 @@
 \tikzset{mark size=2.0}
 \pgfplotsset{every axis/.append style={line width=0.5pt}}\pgfplotsset{every axis legend/.append style={
 font=\tiny,
-at={(1.01,1.0)},
-anchor=north west}}
+at={(0.975,0.025)},
+anchor=south east}}
 \begin{document}
 \begin{tikzpicture}
 \begin{axis}[
@@ -21,62 +21,43 @@ blue,red,green!60!black,orange,purple!60!black,gray,black,green
 },
 axis background/.style={fill=white},
 small,
-width=12cm,
+width=7cm,
+height=7cm,
 ]
-\addplot+[,
+\addplot+[black,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
-,
-,
 ]
 table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_q};
 \addlegendentry{$\epsilon_q$}
-\addplot+[,
+\addplot+[red,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
-,
-,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_h};
-\addlegendentry{$\epsilon_h$}
-\addplot+[,
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_hepsilon_phi};
+\addlegendentry{$\epsilon_h$/$\epsilon_\phi$}
+\addplot+[orange,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
-,
-,
-]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_phi};
-\addlegendentry{$\epsilon_\phi$}
-\addplot+[,
-error bars/.cd,
-x dir=both,x explicit,
-y dir=both,y explicit,
-,
-,
 ]
 table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{x_N}};
 \addlegendentry{$\epsilon_{x_N}$}
-\addplot+[,
+\addplot+[blue,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
-,
-,
 ]
 table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{dot{x}_N}};
 \addlegendentry{$\epsilon_{\dot{x}_N}$}
-\addplot+[,
+\addplot+[dashed, black,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
-,
-,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/order 2};
-\addlegendentry{order $2$}
+table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/order2};
 \end{axis}
 \end{tikzpicture}
 \end{document}
