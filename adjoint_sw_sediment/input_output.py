@@ -272,6 +272,7 @@ class Adjoint_Plotter():
 
 def pickle_model(model, file):
     model_arrays = map_to_arrays(model.w[0], model.y, model.mesh)
+    model_arrays.append(model.t)
     pickle.dump(model_arrays, open(file, 'w'))
 
 def print_timestep_info(model):
@@ -317,9 +318,9 @@ def map_to_arrays(w, x, mesh):
     k = arr[W.sub(6).dofmap().cell_dofs(0)[0]]
     phi_int = arr[W.sub(7).dofmap().cell_dofs(0)[0]]
 
-    return (np.array(y).flatten(), np.array(q).flatten(), 
+    return [np.array(y).flatten(), np.array(q).flatten(), 
             np.array(h).flatten(), np.array(phi).flatten(), 
-            np.array(phi_d).flatten(), x_N, u_N, k, phi_int)
+            np.array(phi_d).flatten(), x_N, u_N, k, phi_int]
 
 def map_function_to_array(f, mesh):
     arr = f.vector().array()
