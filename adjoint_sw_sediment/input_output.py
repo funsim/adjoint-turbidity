@@ -85,6 +85,8 @@ class Plotter():
 
     def update_plot(self, model):
 
+        pickle_model(model, self.save_loc + '_{:06.3f}.pckl'.format(model.t))
+
         y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh)     
         y = y*x_N*self.h_0        
 

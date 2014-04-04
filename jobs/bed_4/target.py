@@ -36,6 +36,11 @@ data = np.array([[  0.00000000e+00,   3.51807229e-01],
 phi_d_x = data[:,0]
 phi_d_y = data[:,1]
 
+def get_data_x():
+  return phi_d_x
+def get_data_y():
+  return phi_d_y
+
 # get linear coefficients
 def fit(n_coeff):
   X = np.zeros([phi_d_x.shape[0], n_coeff])
@@ -61,12 +66,17 @@ def gen_target(model, h_0_norm):
 
   return equation.smooth_pos(target, eps=1e-3)
 
-def plot_functions(model, fns):
+def plot_functions(model, fns, with_data=False, h_0_norm=Constant(1)):
   from matplotlib import pyplot as plt
   for fn in fns:
     plt.plot(input_output.map_function_to_array(model.y, model.mesh), 
              input_output.map_function_to_array(fn, model.mesh),
              label=fn.name())
+  if with_data:
+    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
+        input_output.map_to_arrays(model.w[0], model.y, model.mesh)
+    h_0 = model.h_0.vector().array()[0]*h_0_norm((0,0))
+    plt.scatter(phi_d_x/(x_N*h_0), phi_d_y, label='data')
   plt.legend()
   plt.show()
 

@@ -145,7 +145,18 @@ if method == "OS": # or method == "TT":
   t_proj = Function(model.V, name='target')
   # solve(v*non_dim_t*dx - v*t_proj*dx == 0, t_proj)
   solve(v*t*dx - v*t_proj*dx == 0, t_proj)
-  target.plot_functions(model, [J_proj, phi_d_proj, t_proj])
+  target.plot_functions(model, [J_proj, phi_d_proj, t_proj], with_data=True, h_0_norm=h_0_norm)
+
+  y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
+        input_output.map_to_arrays(model.w[0], model.y, model.mesh)
+  data = {}
+  data['fn_x'] = y*x_N*model.h_0.vector().array()[0]*h_0_norm((0,0))
+  data['target'] = input_output.map_function_to_array(t_proj, model.mesh)
+  data['result'] = input_output.map_function_to_array(phi_d_proj, model.mesh)
+  data['data_x'] = target.get_data_x()
+  data['data_y'] = target.get_data_y()
+  pickle.dump(data, open('final.pckl','w'))
+
   info_green("Fn = %f"%assemble(J_integral*dx))
 
 ################################## 
