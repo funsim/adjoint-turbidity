@@ -1,0 +1,82 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+scaled ticks=false,
+enlargelimits=true,
+yticklabel style={
+anchor=east,
+/pgf/number format/precision=2,
+/pgf/number format/fixed,
+/pgf/number format/fixed zerofill,
+},
+xticklabel style={
+anchor=north,
+/pgf/number format/precision=2,
+/pgf/number format/fixed,
+/pgf/number format/fixed zerofill,
+},
+xlabel=$m$, ylabel=$J$
+]
+\addplot[blue, mark=x, mark options=solid, mark size=1.5] table[x=x, y=j] {
+x j
+1.0 0.155015457719
+1.0585649669 0.137010956033
+1.15730037488 0.109087925525
+1.55224200679 0.0158888784574
+3.44094920223 0.0056907375492
+3.78211828252 0.0360265874332
+3.53395420775 0.00064696329859
+3.51029708778 0.00032014744602
+3.4904251011 0.00022621125636
+};
+\addlegendentry{$x_N$};
+\addplot[red, mark=x, mark options=solid, mark size=1.5] table[x=h, y=j] {
+h j
+1.0 0.155015457719
+1.1 0.137010956033
+1.22224691621 0.109087925525
+1.71123458103 0.0158888784574
+2.64909051125 0.0056907375492
+2.80405879074 0.0360265874332
+2.69133591543 0.00064696329859
+2.67817678745 0.00032014744602
+2.6673948677 0.00022621125636
+};
+\addlegendentry{$h_0/1000.0$};
+\addplot[black, mark=x, mark options=solid, mark size=1.5] table[x=phi, y=j] {
+phi j
+1.0 0.155015457719
+0.953503810814 0.137010956033
+0.891999548886 0.109087925525
+0.645982501175 0.0158888784574
+0.01 0.0056907375492
+0.628618061861 0.0360265874332
+0.178639479909 0.00064696329859
+0.15437102375 0.00032014744602
+0.131174109132 0.00022621125636
+};
+\addlegendentry{$100.0 \, \psi_0$};
+\addplot[dashed, only marks, mark=o, mark size=4] table[x=phi, y=j] {
+phi j
+1.0 0.155015457719
+};
+\addlegendentry{iteration 0};
+\addplot[black, only marks, mark=o, mark size=4] table[x=phi, y=j] {
+phi j
+3.4904251011 0.00022621125636
+};
+\addplot[black, only marks, mark=o, mark size=4] table[x=phi, y=j] {
+phi j
+2.6673948677 0.00022621125636
+};
+\addplot[black, only marks, mark=o, mark size=4] table[x=phi, y=j] {
+phi j
+0.131174109132 0.00022621125636
+};
+\addlegendentry{iteration 9};
+\end{axis}
+\end{tikzpicture}
+\end{document}
