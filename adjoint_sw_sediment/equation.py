@@ -8,7 +8,7 @@ def smooth_neg(val, eps = 1e-15):
     return (val - smooth_abs(val, eps))/2.0
 def smooth_abs(val, eps = 1e-15):
     return (val**2.0 + eps)**0.5
-def smooth_min(val, eps = 1e-15):
+def smooth_min(val, min = 1e-15):
     return smooth_pos(val - min) + min
 
 class Equation():

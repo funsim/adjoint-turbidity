@@ -24,40 +24,40 @@ small,
 width=7cm,
 height=7cm,
 ]
-\addplot+[black,
+\addplot+[black, mark=x, mark options=solid, mark size=2,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_q};
+table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_q};
 \addlegendentry{$\epsilon_q$}
-\addplot+[red,
+\addplot+[red, mark=x, mark options=solid, mark size=2,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_hepsilon_phi};
+table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_hepsilon_phi};
 \addlegendentry{$\epsilon_h$/$\epsilon_\phi$}
-\addplot+[orange,
+\addplot+[orange, mark=x, mark options=solid, mark size=2,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{x_N}};
+table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{x_N}};
 \addlegendentry{$\epsilon_{x_N}$}
-\addplot+[blue,
+\addplot+[blue, mark=x, mark options=solid, mark size=2,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{dot{x}_N}};
+table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/epsilon_{dot{x}_N}};
 \addlegendentry{$\epsilon_{\dot{x}_N}$}
 \addplot+[dashed, black,
 error bars/.cd,
 x dir=both,x explicit,
 y dir=both,y explicit,
 ]
-table[x=x, y=y, x error=x_error, y error=y_error] {/data1/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/order2};
+table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/errors.data/order2};
 \end{axis}
 \end{tikzpicture}
 \end{document}

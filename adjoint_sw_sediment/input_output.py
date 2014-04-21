@@ -16,12 +16,12 @@ plt.rc('font',**{'family':'serif','serif':['cm']})
 # map_to_arrays
 
 def similarity_u(model, y):
-    K = (27*model.Fr_**2.0/(12-2*model.Fr_**2.0))**(1./3.)
+    K = (27*model.Fr.vector().array()[0]**2.0/(12-2*model.Fr.vector().array()[0]**2.0))**(1./3.)
     return (2./3.)*K*model.t**(-1./3.)*y
 
 def similarity_h(model, y):
-    K = (27*model.Fr_**2.0/(12-2*model.Fr_**2.0))**(1./3.)
-    H0 = 1./model.Fr_**2.0 - 0.25 + 0.25*y**2.0
+    K = (27*model.Fr.vector().array()[0]**2.0/(12-2*model.Fr.vector().array()[0]**2.0))**(1./3.)
+    H0 = 1./model.Fr.vector().array()[0]**2.0 - 0.25 + 0.25*y**2.0
     return (4./9.)*K**2.0*model.t**(-2./3.)*H0
 
 def dam_break_u(model, x):
@@ -118,7 +118,7 @@ class Plotter():
             self.phi_d_line, = self.phi_d_plot.plot(y, phi_d*self.phi_0*self.h_0, 'r-')
 
         if self.similarity:
-            similarity_x = np.linspace(0.0,(27*model.Fr_**2.0/(12-2*model.Fr_**2.0))**(1./3.)*model.t**(2./3.),1001)
+            similarity_x = np.linspace(0.0,(27*model.Fr.vector().array()[0]**2.0/(12-2*model.Fr.vector().array()[0]**2.0))**(1./3.)*model.t**(2./3.),1001)
             self.q_line_2, = self.q_plot.plot(similarity_x, 
                                               [similarity_u(model,x) for x in np.linspace(0.0,1.0,1001)], 
                                               'k--')
@@ -283,6 +283,7 @@ def print_timestep_info(model):
 def timestep_info_string(model, tex=False):
     n_ele = len(model.mesh.cells())
     y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh) 
+    phi_int_start = map_to_arrays(model.w['ic'], model.y, model.mesh)[8] 
     x_N_start = map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
 
     if tex:
@@ -292,7 +293,7 @@ def timestep_info_string(model, tex=False):
     else:
       return ("{0:6d}, t = {1:.2e}, dt = {2:.2e}: ".format(model.t_step-1, model.t, k) +
               "x_N = {0:.2e}, u_N = {1:.2e}, h_N = {2:.2e}, phi_int = {3:.3e}"
-              .format(x_N, u_N, h[-1], phi_int*x_N/x_N_start))
+              .format(x_N, u_N, h[-1], phi_int/phi_int_start*x_N/x_N_start))
 
 def map_to_arrays(w, x, mesh):
 

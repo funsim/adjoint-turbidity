@@ -21,10 +21,27 @@ solver_parameters["newton_solver"]["linear_solver"] = "lu"
 set_log_level(ERROR)
 
 ################################## 
+# INPUT VARIABLES
+################################## 
+# type - 0=sand, 1=sand+mud
+type = 1
+# method
+method = "L-BFGS-B"
+# starting values 
+K = ((27.0*1.19**2.0)/(12.0 - 2.0*1.19**2.0))**(1./3.)
+info_blue("K = %f"%K)
+t = 3.0
+iv = [K*t**(2./3.), 1000, 0.01]
+s = [1.0, 100.0, 0.01]
+if len(sys.argv) > 1:
+  iv_in = eval(sys.argv[1])
+  iv = [eval(iv_in[0])*s[0], eval(iv_in[1])*s[1], eval(iv_in[2])*s[2]]
+  method = "OS"
+end = 200 
+
+################################## 
 # MODEL SETUP
 ################################## 
-
-end = 300 #eval(sys.argv[1])
 
 # define end criteria
 def end_criteria(model):      
@@ -45,36 +62,38 @@ model = Model('bed_4_sim.asml', end_criteria = end_criteria, no_init=True)
 model.initialise_function_spaces()
 load_options.post_init(model, model.xml_path)
 
-# parameter normalisation
-h_0_norm = Constant(1000.0)
-model.x_N_norm.assign(Constant(1.0))
-phi_0_norm = Constant(0.01)
+# parameter 
+model.x_N_ic_norm.assign(Constant(s[0]))
+h_0_norm = Constant(s[1])
+phi_0_norm = Constant(s[2])
 phi_0 = Function(model.R, name="phi_0")
 
 # define model stopping criteria
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
+phi_int_start = split(model.w['ic'])[7]
 x_N_start = split(model.w['ic'])[4]
 model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
-                   (Constant(1.0) + erf(Constant(1e6)*(phi_int*x_N/x_N_start-Constant(0.05))))
+                   (Constant(1.0) + erf(Constant(1e6)*(phi_int/phi_int_start*x_N/x_N_start-Constant(0.05))))
                    )
 
 # define beta as form function of h_0
-D = 2.5e-4
+if type == 0:
+  D = 2.5e-4
+else:
+  D = 1.0e-4
 model.beta = Constant(2./(9.*1e-6)) * \
     (D**2.0/(model.h_0*h_0_norm*phi_0*phi_0_norm)**0.5)
+v = TestFunction(model.R)
 
 # generate form
 model.generate_form()
 
 ################################## 
-# CREATE REDUCED FUNCTIONAL
+# SET UP PARAMETERS
 ################################## 
-v = TestFunction(model.R)
-
-# define parameters
-model.x_N_ic.assign( Constant( 1/model.x_N_norm((0,0)) ) )
-model.h_0.assign( Constant( 1000/h_0_norm((0,0)) ) )
-phi_0.assign( Constant( 0.01/phi_0_norm((0,0)) ) )
+model.x_N_ic.assign( Constant( iv[0]/model.x_N_ic_norm((0,0)) ) )
+model.h_0.assign( Constant( iv[1]/h_0_norm((0,0)) ) )
+phi_0.assign( Constant( iv[2]/phi_0_norm((0,0)) ) )
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
 junk = project(model.x_N_ic, model.R)
 junk = project(model.h_0, model.R)
@@ -83,21 +102,50 @@ junk = project(phi_0, model.R)
 parameters = [InitialConditionParameter(model.x_N_ic), 
               InitialConditionParameter(model.h_0), 
               InitialConditionParameter(phi_0)]
+info_green('Starting values: %.2e %.2e %.2e'%(model.x_N_ic.vector().array()[0], 
+                                              model.h_0.vector().array()[0],
+                                              phi_0.vector().array()[0]))
 
-# target deposit
-t = target.gen_target(model, h_0_norm)
+################################## 
+# CREATE REDUCED FUNCTIONAL
+################################## 
 
+# # target deposit 1
+# t = target.gen_target(model, h_0_norm, type)
+
+# q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
+
+# dim_phi_d = phi_0*phi_0_norm*model.h_0*h_0_norm*phi_d
+# diff = dim_phi_d - t
+# J_integral = inner(diff, diff)
+# J = Functional(J_integral*dx*dt[FINISH_TIME])
+
+# target deposit 2
+t = target.gen_target(model, h_0_norm, type)
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
-
 dim_phi_d = phi_0*phi_0_norm*model.h_0*h_0_norm*phi_d
 diff = dim_phi_d - t
-J_integral = inner(diff, diff)
+
+# filter beyond data
+filter = e**-(equation.smooth_pos(model.y*x_N - (target.get_data_x(type)[-1] - 1000)))
+scale = Function(model.R)
+v = TestFunction(model.R)
+scale_f = v*filter*dx - v*scale*dx
+def prep_target_cb(model):
+  solve(scale_f == 0, scale)
+
+# penalise short runs
+penaliser_scale = Constant(5e3)
+penaliser_min = Constant(5e4)
+penaliser = (equation.smooth_min(penaliser_scale + penaliser_min - model.h_0*h_0_norm*x_N, 
+                                 penaliser_scale)/penaliser_scale)**2.0
+
+J_integral = penaliser*scale**-1*filter*inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
-method = "IPOPT"
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
-                         # prep_target_cb = prep_target_cb,
+                         prep_target_cb = prep_target_cb,
                          method = method)  
 
 ################################## 
@@ -136,7 +184,7 @@ if method == "OS": # or method == "TT":
   t_proj = Function(model.V, name='target')
   # solve(v*non_dim_t*dx - v*t_proj*dx == 0, t_proj)
   solve(v*t*dx - v*t_proj*dx == 0, t_proj)
-  target.plot_functions(model, [J_proj, phi_d_proj, t_proj], with_data=True, h_0_norm=h_0_norm)
+  target.plot_functions(model, [J_proj, phi_d_proj, t_proj], type, with_data=True, h_0_norm=h_0_norm)
 
   y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
         input_output.map_to_arrays(model.w[0], model.y, model.mesh)
@@ -144,10 +192,12 @@ if method == "OS": # or method == "TT":
   data['fn_x'] = y*x_N*model.h_0.vector().array()[0]*h_0_norm((0,0))
   data['target'] = input_output.map_function_to_array(t_proj, model.mesh)
   data['result'] = input_output.map_function_to_array(phi_d_proj, model.mesh)
-  data['data_x'] = target.get_data_x()
-  data['data_y'] = target.get_data_y()
+  data['data_x'] = target.get_data_x(type)
+  data['data_y'] = target.get_data_y(type)
   pickle.dump(data, open('final.pckl','w'))
 
+  L = x_N*model.h_0.vector().array()[0]*h_0_norm((0,0))
+  info_green("L = %f"%L)
   info_green("Fn = %f"%assemble(J_integral*dx))
 
 ################################## 
@@ -155,10 +205,10 @@ if method == "OS": # or method == "TT":
 ################################## 
 bnds =   (
   ( 
-    0.25/model.x_N_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
+    0.25/model.x_N_ic_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
     ), 
   ( 
-    20.0/model.x_N_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
+    50.0/model.x_N_ic_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
     )
   )
 
@@ -167,7 +217,7 @@ bnds =   (
 ################################## 
 if method == "L-BFGS-B":
   m_opt = minimize(rf, method = "L-BFGS-B", 
-                   tol=1e-4,  
+                   tol=1e-6,  
                    options = {'disp': True }, 
                    bounds = bnds,
                    in_euclidian_space = False) 

@@ -11,7 +11,7 @@
   <time_options>
     <time_discretisation name="runge_kutta"/>
     <start_time>
-      <real_value rank="0">0.5</real_value>
+      <real_value rank="0">3.0</real_value>
     </start_time>
     <adaptive_timestep>
       <cfl_criteria>
@@ -22,7 +22,14 @@
       <real_value rank="0">100000.0</real_value>
     </finish_time>
   </time_options>
-  <output_options/>
+  <output_options>
+    <plotting>
+      <plotting_interval>
+        <real_value rank="0">0.1</real_value>
+      </plotting_interval>
+      <output name="live_plotting"/>
+    </plotting>
+  </output_options>
   <spatial_discretisation>
     <discretisation name="discontinuous"/>
   </spatial_discretisation>
@@ -45,13 +52,13 @@
     </volume_fraction>
     <initial_length>
       <form>
-        <string_value lines="20" type="code" language="python">model.x_N_ic*model.x_N_norm</string_value>
+        <string_value lines="20" type="code" language="python">model.x_N_ic*model.x_N_ic_norm</string_value>
         <additional_form_var>
           <var name="x_N_ic">
             <string_value lines="20" type="code" language="python">model.x_N_ic = project(Constant(1.0), model.R, name='x_N_ic')</string_value>
           </var>
-          <var name="x_N_norm">
-            <string_value lines="20" type="code" language="python">model.x_N_norm = Constant(0.001, name='x_N_norm')</string_value>
+          <var name="x_N_ic_norm">
+            <string_value lines="20" type="code" language="python">model.x_N_ic_norm = Constant(0.001, name='x_N_ic_norm')</string_value>
           </var>
         </additional_form_var>
       </form>
@@ -63,7 +70,7 @@
     </front_velocity>
     <timestep>
       <form>
-        <string_value lines="20" type="code" language="python">(model.x_N_ic*model.x_N_norm*model.dX)*model.adapt_cfl/((2./3.)*K*0.5**-(1./3.))</string_value>
+        <string_value lines="20" type="code" language="python">(model.x_N_ic*model.x_N_ic_norm*model.dX)*model.adapt_cfl/((2./3.)*K*0.5**-(1./3.))</string_value>
         <additional_form_var>
           <var name="K">
             <string_value lines="20" type="code" language="python">K = ((27.0*model.Fr**2.0)/(12.0 - 2.0*model.Fr**2.0))**(1./3.)</string_value>

@@ -10,8 +10,11 @@
   </mesh>
   <time_options>
     <time_discretisation name="runge_kutta"/>
-    <finish_time>
+    <start_time>
       <real_value rank="0">1.0</real_value>
+    </start_time>
+    <finish_time>
+      <real_value rank="0">3.0</real_value>
     </finish_time>
   </time_options>
   <output_options>
@@ -24,9 +27,7 @@
     <ts_info/>
   </output_options>
   <spatial_discretisation>
-    <discretisation name="discontinuous">
-      <slope_limit/>
-    </discretisation>
+    <discretisation name="discontinuous"/>
   </spatial_discretisation>
   <non_dimensional_numbers>
     <beta>
@@ -34,6 +35,26 @@
     </beta>
   </non_dimensional_numbers>
   <initial_conditions>
+    <height>
+      <form>
+        <string_value type="code" lines="20" language="python">model.S_h</string_value>
+      </form>
+    </height>
+    <momentum>
+      <form>
+        <string_value type="code" lines="20" language="python">model.S_q</string_value>
+      </form>
+    </momentum>
+    <volume_fraction>
+      <form>
+        <string_value type="code" lines="20" language="python">model.S_h</string_value>
+      </form>
+    </volume_fraction>
+    <initial_length>
+      <c_string>
+        <string_value lines="1">(Fr/(1.0 + Fr/2.0))*t + 1.0</string_value>
+      </c_string>
+    </initial_length>
     <timestep>
       <c_string>
         <string_value lines="1">dX/Fr*cfl</string_value>
@@ -42,17 +63,22 @@
     <variables>
       <var name="Fr">
         <code>
-          <string_value lines="20" type="code" language="python">self.Fr((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.Fr.vector().array()[0]</string_value>
         </code>
       </var>
       <var name="dX">
         <code>
-          <string_value lines="20" type="code" language="python">self.dX((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.dX((0,0))</string_value>
         </code>
       </var>
       <var name="cfl">
         <code>
-          <string_value lines="20" type="code" language="python">self.adapt_cfl((0,0))</string_value>
+          <string_value lines="20" type="code" language="python">model.adapt_cfl.vector().array()[0]</string_value>
+        </code>
+      </var>
+      <var name="t">
+        <code>
+          <string_value type="code" lines="20" language="python">model.start_time</string_value>
         </code>
       </var>
     </variables>

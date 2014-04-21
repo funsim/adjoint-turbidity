@@ -29,6 +29,7 @@ parameters["adjoint"]["stop_annotating"] = True
 
 # create model
 model = Model('similarity.asml', error_callback=getError, no_init=True)
+model.similarity = True
 
 nx = np.array([int(x) for x in np.linspace(10, 20, 6)])
 h = 1.0/nx
