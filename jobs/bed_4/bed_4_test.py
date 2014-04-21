@@ -26,7 +26,7 @@ set_log_level(ERROR)
 # type - 0=sand, 1=sand+mud
 type = 1
 # method
-method = "L-BFGS-B"
+method = "OS"
 # starting values 
 K = ((27.0*1.19**2.0)/(12.0 - 2.0*1.19**2.0))**(1./3.)
 info_blue("K = %f"%K)
