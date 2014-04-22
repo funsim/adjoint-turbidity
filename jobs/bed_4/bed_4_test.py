@@ -23,15 +23,13 @@ set_log_level(ERROR)
 ################################## 
 # INPUT VARIABLES
 ################################## 
-# type - 0=sand, 1=sand+mud
-type = 1
 # method
-method = "OS"
+method = "L-BFGS-B"
 # starting values 
 K = ((27.0*1.19**2.0)/(12.0 - 2.0*1.19**2.0))**(1./3.)
 info_blue("K = %f"%K)
 t = 3.0
-iv = [K*t**(2./3.), 1000, 0.01]
+iv = [9.25e-05, 2000, 0.02]
 s = [1.0, 100.0, 0.01]
 if len(sys.argv) > 1:
   iv_in = eval(sys.argv[1])
@@ -42,6 +40,7 @@ end = 200
 ################################## 
 # MODEL SETUP
 ################################## 
+type = 1
 
 # define end criteria
 def end_criteria(model):      
@@ -63,12 +62,14 @@ model.initialise_function_spaces()
 load_options.post_init(model, model.xml_path)
 
 # parameter 
-model.x_N_ic_norm.assign(Constant(s[0]))
+D_norm.assign(Constant(s[0]))
 h_0_norm = Constant(s[1])
 phi_0_norm = Constant(s[2])
 phi_0 = Function(model.R, name="phi_0")
+D = Function(model.R, name="D")
 
 # define model stopping criteria
+print len(split(model.w['int']))
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
 phi_int_start = split(model.w['ic'])[7]
 x_N_start = split(model.w['ic'])[4]
@@ -77,10 +78,6 @@ model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
                    )
 
 # define beta as form function of h_0
-if type == 0:
-  D = 2.5e-4
-else:
-  D = 1.0e-4
 model.beta = Constant(2./(9.*1e-6)) * \
     (D**2.0/(model.h_0*h_0_norm*phi_0*phi_0_norm)**0.5)
 v = TestFunction(model.R)
@@ -91,18 +88,20 @@ model.generate_form()
 ################################## 
 # SET UP PARAMETERS
 ################################## 
-model.x_N_ic.assign( Constant( iv[0]/model.x_N_ic_norm((0,0)) ) )
+model.D.assign( Constant( iv[0]/model.D_norm((0,0)) ) )
 model.h_0.assign( Constant( iv[1]/h_0_norm((0,0)) ) )
 phi_0.assign( Constant( iv[2]/phi_0_norm((0,0)) ) )
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
-junk = project(model.x_N_ic, model.R)
+junk = project(model.D, model.R)
 junk = project(model.h_0, model.R)
 junk = project(phi_0, model.R)
 # create list
-parameters = [InitialConditionParameter(model.x_N_ic), 
+parameters = [InitialConditionParameter(model.D), 
               InitialConditionParameter(model.h_0), 
               InitialConditionParameter(phi_0)]
-info_green('Starting values: %.2e %.2e %.2e'%(model.x_N_ic.vector().array()[0], 
+parameters = [InitialConditionParameter(model.h_0), 
+              InitialConditionParameter(phi_0)]
+info_green('Starting values: %.2e %.2e %.2e'%(model.D.vector().array()[0], 
                                               model.h_0.vector().array()[0],
                                               phi_0.vector().array()[0]))
 
@@ -153,7 +152,7 @@ rf = MyReducedFunctional(model, J, parameters,
 ################################## 
 if method == "OS":
   rf.autoscale = False
-  rf.compute_functional_mem(np.array([model.x_N_ic.vector().array()[0], 
+  rf.compute_functional_mem(np.array([model.D.vector().array()[0], 
                                       model.h_0.vector().array()[0]]))
 
 ################################## 
@@ -164,7 +163,7 @@ if method == "TT":
   # h_0 works with seed = 1e1
   helpers.test_gradient_array(rf.compute_functional_mem, 
                               rf.compute_gradient_mem,
-                              np.array([model.x_N_ic.vector().array()[0], 
+                              np.array([model.D.vector().array()[0], 
                                         model.h_0.vector().array()[0], 
                                         phi_0.vector().array()[0]]),
                               # perturbation_direction = np.array([1.0,0.0]),
@@ -205,10 +204,10 @@ if method == "OS": # or method == "TT":
 ################################## 
 bnds =   (
   ( 
-    0.25/model.x_N_ic_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
+    1.0e-5/model.D_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
     ), 
   ( 
-    50.0/model.x_N_ic_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
+    2.5e-4/model.D_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
     )
   )
 
@@ -217,7 +216,7 @@ bnds =   (
 ################################## 
 if method == "L-BFGS-B":
   m_opt = minimize(rf, method = "L-BFGS-B", 
-                   tol=1e-6,  
+                   tol=1e-9,  
                    options = {'disp': True }, 
                    bounds = bnds,
                    in_euclidian_space = False) 

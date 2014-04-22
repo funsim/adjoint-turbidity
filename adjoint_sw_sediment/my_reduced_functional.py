@@ -156,6 +156,7 @@ class MyReducedFunctional(ReducedFunctional):
           if self.auto_scale is None:
             dj = self.derivative(forget=False, project=False)
             dj = np.array([dj_.vector().array() for dj_ in dj])
+            info_green('Relative gradients = %s'%str(["%+010.7e"%r_ for r_ in r]))
             r = dj/np.array(memoizable_m)
             self.auto_scale = 0.1/abs(r).max()
             info_green('Auto scale factor = %e'%self.auto_scale)

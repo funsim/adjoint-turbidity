@@ -295,17 +295,6 @@ class Model():
             # runge kutta (2nd order)
             if self.time_discretise.func_name == 'runge_kutta':
 
-                y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
-                    io.map_to_arrays(self.w[0], self.y, self.mesh)
-                
-                print q
-                print h
-                print phi
-                print phi_d
-                print x_N, u_N, k, phi_int
-
-                sys.exit()
-
                 # runge kutta (2nd order)
                 self.w['int'].assign(self.w[1])
 
