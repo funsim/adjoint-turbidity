@@ -24,13 +24,11 @@ set_log_level(ERROR)
 # INPUT VARIABLES
 ################################## 
 # method
-method = "L-BFGS-B"
+method = "IPOPT"
 # starting values 
-K = ((27.0*1.19**2.0)/(12.0 - 2.0*1.19**2.0))**(1./3.)
-info_blue("K = %f"%K)
-t = 3.0
-iv = [9.25e-05, 2000, 0.02]
-s = [1.0, 100.0, 0.01]
+iv = [9.25e-05**2.0, 2000, 0.02]
+s = [1e-9, 1000.0, 0.1]
+s = np.array(iv)
 if len(sys.argv) > 1:
   iv_in = eval(sys.argv[1])
   iv = [eval(iv_in[0])*s[0], eval(iv_in[1])*s[1], eval(iv_in[2])*s[2]]
@@ -43,18 +41,26 @@ end = 200
 type = 1
 
 # define end criteria
-def end_criteria(model):      
-  if model.t_step > end:  
-    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
-        input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-    x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
-    phi_int_s = phi_int*x_N/x_N_start
-    if phi_int_s > 0.05:
-      info_red("ERROR: stopping criteria not reached in alloted timesteps")
-      info_red("phi_int was %f"%phi_int_s)
-      sys.exit()
+def end_criteria(model): 
+  y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
+      input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
+  phi_int_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[8]  
+  x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
+  if phi_int/phi_int_start*x_N/x_N_start < 0.05:
     return True
-  return False
+  return False  
+
+  # if model.t_step > end:  
+  #   y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
+  #       input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
+  #   x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
+  #   phi_int_s = phi_int*x_N/x_N_start
+  #   if phi_int_s > 0.05:
+  #     info_red("ERROR: stopping criteria not reached in alloted timesteps")
+  #     info_red("phi_int was %f"%phi_int_s)
+  #     sys.exit()
+  #   return True
+  # return False
 
 # load model
 model = Model('bed_4_sim.asml', end_criteria = end_criteria, no_init=True)
@@ -62,24 +68,23 @@ model.initialise_function_spaces()
 load_options.post_init(model, model.xml_path)
 
 # parameter 
-D_norm.assign(Constant(s[0]))
+D_2_norm = Constant(s[0])
 h_0_norm = Constant(s[1])
 phi_0_norm = Constant(s[2])
 phi_0 = Function(model.R, name="phi_0")
-D = Function(model.R, name="D")
+D_2 = Function(model.R, name="D_2")
 
-# define model stopping criteria
-print len(split(model.w['int']))
-q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
-phi_int_start = split(model.w['ic'])[7]
-x_N_start = split(model.w['ic'])[4]
-model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
-                   (Constant(1.0) + erf(Constant(1e6)*(phi_int/phi_int_start*x_N/x_N_start-Constant(0.05))))
-                   )
+# # define model stopping criteria
+# q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w['int'])
+# phi_int_start = split(model.w['ic'])[7]
+# x_N_start = split(model.w['ic'])[4]
+# model.adapt_cfl = (model.adapt_cfl*Constant(0.5)*
+#                    (Constant(1.0) + erf(Constant(1e6)*(phi_int/phi_int_start*x_N/x_N_start-Constant(0.05))))
+#                    )
 
 # define beta as form function of h_0
 model.beta = Constant(2./(9.*1e-6)) * \
-    (D**2.0/(model.h_0*h_0_norm*phi_0*phi_0_norm)**0.5)
+    (D_2*D_2_norm/(model.h_0*h_0_norm*phi_0*phi_0_norm)**0.5)
 v = TestFunction(model.R)
 
 # generate form
@@ -88,22 +93,23 @@ model.generate_form()
 ################################## 
 # SET UP PARAMETERS
 ################################## 
-model.D.assign( Constant( iv[0]/model.D_norm((0,0)) ) )
+D_2.assign( Constant( iv[0]/D_2_norm((0,0)) ) )
 model.h_0.assign( Constant( iv[1]/h_0_norm((0,0)) ) )
 phi_0.assign( Constant( iv[2]/phi_0_norm((0,0)) ) )
 # add adjoint entry for parameters (fix bug in dolfin_adjoint)
-junk = project(model.D, model.R)
+junk = project(D_2, model.R)
 junk = project(model.h_0, model.R)
 junk = project(phi_0, model.R)
 # create list
-parameters = [InitialConditionParameter(model.D), 
+parameters = [InitialConditionParameter(D_2), 
               InitialConditionParameter(model.h_0), 
               InitialConditionParameter(phi_0)]
-parameters = [InitialConditionParameter(model.h_0), 
-              InitialConditionParameter(phi_0)]
-info_green('Starting values: %.2e %.2e %.2e'%(model.D.vector().array()[0], 
+info_green('Starting values: %.2e %.2e %.2e'%(D_2.vector().array()[0], 
                                               model.h_0.vector().array()[0],
                                               phi_0.vector().array()[0]))
+info_green('Unscaled starting values: %.2e %.2e %.2e'%(D_2.vector().array()[0]*D_2_norm((0,0)), 
+                                                       model.h_0.vector().array()[0]*h_0_norm((0,0)),
+                                                       phi_0.vector().array()[0]*phi_0_norm((0,0))))
 
 ################################## 
 # CREATE REDUCED FUNCTIONAL
@@ -125,26 +131,28 @@ q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
 dim_phi_d = phi_0*phi_0_norm*model.h_0*h_0_norm*phi_d
 diff = dim_phi_d - t
 
-# filter beyond data
-filter = e**-(equation.smooth_pos(model.y*x_N - (target.get_data_x(type)[-1] - 1000)))
-scale = Function(model.R)
-v = TestFunction(model.R)
-scale_f = v*filter*dx - v*scale*dx
-def prep_target_cb(model):
-  solve(scale_f == 0, scale)
+# # filter beyond data
+# filter = e**-(equation.smooth_pos(model.y*x_N - (target.get_data_x(type)[-1] - 1000)))
+# scale = Function(model.R)
+# v = TestFunction(model.R)
+# scale_f = v*filter*dx - v*scale*dx
+# def prep_target_cb(model):
+#   solve(scale_f == 0, scale)
 
-# penalise short runs
-penaliser_scale = Constant(5e3)
-penaliser_min = Constant(5e4)
-penaliser = (equation.smooth_min(penaliser_scale + penaliser_min - model.h_0*h_0_norm*x_N, 
-                                 penaliser_scale)/penaliser_scale)**2.0
+# # penalise short runs
+# penaliser_scale = Constant(5e3)
+# penaliser_min = Constant(5e4)
+# penaliser = (equation.smooth_min(penaliser_scale + penaliser_min - model.h_0*h_0_norm*x_N, 
+#                                  penaliser_scale)/penaliser_scale)**2.0
 
-J_integral = penaliser*scale**-1*filter*inner(diff, diff)
+# J_integral = penaliser*scale**-1*filter*inner(diff, diff)
+
+J_integral = inner(diff, diff)
 J = Functional(J_integral*dx*dt[FINISH_TIME])
 
 rf = MyReducedFunctional(model, J, parameters,
                          scale = 1e0, autoscale = True,
-                         prep_target_cb = prep_target_cb,
+                         # prep_target_cb = prep_target_cb,
                          method = method)  
 
 ################################## 
@@ -152,7 +160,7 @@ rf = MyReducedFunctional(model, J, parameters,
 ################################## 
 if method == "OS":
   rf.autoscale = False
-  rf.compute_functional_mem(np.array([model.D.vector().array()[0], 
+  rf.compute_functional_mem(np.array([D_2.vector().array()[0], 
                                       model.h_0.vector().array()[0]]))
 
 ################################## 
@@ -163,7 +171,7 @@ if method == "TT":
   # h_0 works with seed = 1e1
   helpers.test_gradient_array(rf.compute_functional_mem, 
                               rf.compute_gradient_mem,
-                              np.array([model.D.vector().array()[0], 
+                              np.array([D_2.vector().array()[0], 
                                         model.h_0.vector().array()[0], 
                                         phi_0.vector().array()[0]]),
                               # perturbation_direction = np.array([1.0,0.0]),
@@ -204,10 +212,10 @@ if method == "OS": # or method == "TT":
 ################################## 
 bnds =   (
   ( 
-    1.0e-5/model.D_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
+    1.0e-5**2.0/D_2_norm((0,0)), 100/h_0_norm((0,0)), 0.0001/phi_0_norm((0,0))
     ), 
   ( 
-    2.5e-4/model.D_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
+    2.5e-4**2.0/D_2_norm((0,0)), 4000/h_0_norm((0,0)), 0.4/phi_0_norm((0,0))
     )
   )
 
