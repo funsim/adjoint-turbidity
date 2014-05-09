@@ -15,7 +15,7 @@
     </start_time>
     <adaptive_timestep>
       <cfl_criteria>
-        <real_value rank="0">0.4</real_value>
+        <real_value rank="0">0.2</real_value>
       </cfl_criteria>
     </adaptive_timestep>
     <finish_time>

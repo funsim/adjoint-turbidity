@@ -15,3 +15,6 @@ auto
 pdflatex_log
 *.synctex.gz
 *.pdf
+*.gnuplot
+*.table
+*.vrs
