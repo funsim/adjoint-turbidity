@@ -24,7 +24,7 @@ set_log_level(ERROR)
 # INPUT VARIABLES
 ################################## 
 # method
-method = "IPOPT"
+method = "L-BFGS-B" #"IPOPT"
 # starting values 
 iv = [480, 0.05, 200e-6**2]
 s = np.array(iv)
