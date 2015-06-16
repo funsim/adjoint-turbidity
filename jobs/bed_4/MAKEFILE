@@ -1,0 +1,1 @@
+./plot.py > var_j.tex && pdflatex -shell-escape var_j.tex

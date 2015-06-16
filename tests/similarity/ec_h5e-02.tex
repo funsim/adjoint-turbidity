@@ -2,36 +2,21 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=newest}
 \tikzset{mark size=2.0}
-\pgfplotsset{every axis/.append style={line width=0.5pt}}\begin{document}
+\pgfplotsset{every axis/.append style={line width=1.5pt}}\begin{document}
 \begin{tikzpicture}
 \begin{axis}[
-xmode=normal,
-ymode=normal,
 xlabel={$x$},
 ylabel={$h$},
 grid=none,
 enlargelimits=true,
-cycle multi list={
-solid,dashed\nextlist
-blue,red,green!60!black,orange,purple!60!black,gray,black,green
-},
-axis background/.style={fill=white},
 small,
 width=6cm,
 height=6cm,
 ]
-\addplot+[red,
-error bars/.cd,
-x dir=both,x explicit,
-y dir=both,y explicit,
-]
-table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/ec_h5e-02.data/5e-02};
-\addplot+[dashed, black,
-error bars/.cd,
-x dir=both,x explicit,
-y dir=both,y explicit,
-]
-table[x=x, y=y, x error=x_error, y error=y_error] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/ec_h5e-02.data/sim};
+\addplot+[solid, gray!50, no marks]
+table[x=x, y=y] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/ec_h5e-02.data/5e-02};
+\addplot+[dashed, black, no marks]
+table[x=x, y=y] {/home/sp911/Code/adjoint-sw-sediment/tests/similarity/ec_h5e-02.data/sim};
 \end{axis}
 \end{tikzpicture}
 \end{document}

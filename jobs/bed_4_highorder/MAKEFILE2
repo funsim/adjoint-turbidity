@@ -1,0 +1,1 @@
+./plot_2.py | tail -n +3 > deposit.tex && pdflatex -shell-escape deposit.tex

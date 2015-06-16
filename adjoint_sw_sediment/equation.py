@@ -10,6 +10,8 @@ def smooth_abs(val, eps = 1e-15):
     return (val**2.0 + eps)**0.5
 def smooth_min(val, min = 1e-15):
     return smooth_pos(val - min) + min
+def smooth_max(val, max):
+    return max - smooth_pos(max - val)
 
 class Equation():
 

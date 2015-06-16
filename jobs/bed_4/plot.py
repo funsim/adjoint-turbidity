@@ -3,14 +3,16 @@ from pickle import *
 from numpy import *
 import glob
 
-s = 1.580126e-01
+s = 1.5780126e-01
 method = "IPOPT"
 offset = 0.2
 t_offset = 0.01
 
 n = [eval(f_.split('_')[-1].split('.')[0]) for f_ in glob.glob('opt_%s*.pckl'%method)]
 n.sort()
+n = n[:15]
 files = ['opt_%s_%d.pckl'%(method, i) for i in n]
+#print files[-1]
 
 min_ = 1000000
 max_ = -1000000
@@ -55,7 +57,7 @@ print '''\\addplot[red, densely dashed, mark=*, mark options=solid] table[x=var,
 var j'''
 for f in files:
     a = load(open(f))
-    print a['ic'][0][0], a['j']*s
+    print a['ic'][0][0], a['j']/s
 print '''};
 \\addlegendentry{$(h_0)_n / (h_0)_0$}'''
 
@@ -63,7 +65,7 @@ print '''\\addplot[blue, densely dashed, mark=*, mark options=solid] table[x=var
 var j'''
 for f in files:
     a = load(open(f))
-    print a['ic'][1][0], a['j']*s
+    print a['ic'][1][0], a['j']/s
 print '''};
 \\addlegendentry{$(\\psi_0)_n / (\\psi_0)_0$}'''
 
@@ -71,18 +73,18 @@ print '''\\addplot[black!30!green, densely dashed, mark=*, mark options=solid] t
 var j'''
 for f in files:
     a = load(open(f))
-    print a['ic'][2][0], a['j']*s
+    print a['ic'][2][0]**0.5, a['j']/s
 print '''};
-\\addlegendentry{$(D^2)_n / (D^2)_0$}'''
+\\addlegendentry{$(D)_n / (D)_0$}'''
 
 a = load(open('opt_%s_1.pckl'%method))
-print "\\node[anchor=west] at (axis cs:%.15f,%.15f) {\\tiny iteration $(n)$};"%(max_ + offset + t_offset, 5e-2)
+print "\\node[anchor=west] at (axis cs:%.15f,%.15f) {\\tiny iteration $(n)$};"%(max_ + offset + t_offset, 2e-1)
 
 j = 0
 for i in n:
   a = load(open('opt_%s_%d.pckl'%(method, i)))
-  print "\\addplot[gray, densely dotted, domain=%.15f:%.15f] function { %.15f };"%(- offset, max_ + offset, a['j']*s)
-  print "\\node[anchor=west] at (axis cs:%.15f,%.15f) {\\tiny $%d$};"%(max_ + offset + t_offset, a['j']*s, j)
+  print "\\addplot[gray, densely dotted, domain=%.15f:%.15f] function { %.15f };"%(- offset, max_ + offset, a['j']/s)
+  print "\\node[anchor=west] at (axis cs:%.15f,%.15f) {\\tiny $%d$};"%(max_ + offset + t_offset, a['j']/s, j)
   j+=1
 
 

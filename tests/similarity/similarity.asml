@@ -18,12 +18,6 @@
     </finish_time>
   </time_options>
   <output_options>
-    <plotting>
-      <plotting_interval>
-        <real_value rank="0">1.0</real_value>
-      </plotting_interval>
-      <output name="live_plotting"/>
-    </plotting>
   </output_options>
   <spatial_discretisation>
     <discretisation name="discontinuous"/>

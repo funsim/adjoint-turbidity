@@ -1,0 +1,31 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usetikzlibrary{calc}
+\pgfplotsset{compat=newest}
+\pgfplotsset{every axis/.append style={line width=0.5pt}}
+\tikzset{mark size=1.0}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+scaled ticks=false,
+enlargelimits=false,
+xlabel=$h_0$, ylabel=${x_N}_0$
+]
+\addplot[dashed, mark=*, mark options=solid] table[x=h,y=phi] {
+h phi
+1000.0 1.0
+1100.0 1.05433705941
+1380.82171628 1.33407141424
+1324.20961183 1.27524478863
+1288.17381783 1.23515088358
+1303.14471288 1.25184643527
+1301.8192207 1.2501486357
+1301.82909919 1.24989590641
+1302.09736321 1.24918517414
+1303.16002089 1.24724350067
+1305.9559452 1.24295742427
+};
+\end{axis}
+\end{tikzpicture}
+\end{document}

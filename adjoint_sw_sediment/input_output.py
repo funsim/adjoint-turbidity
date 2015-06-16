@@ -273,9 +273,22 @@ class Adjoint_Plotter():
         plt.close()
 
 def pickle_model(model, file):
-    model_arrays = map_to_arrays(model.w[0], model.y, model.mesh)
-    model_arrays.append(model.t)
-    pickle.dump(model_arrays, open(file, 'w'))
+    y, q, h, phi, phi_d, x_N, u_N, k, phi_int = map_to_arrays(model.w[0], model.y, model.mesh)
+    m = {'y':y, 
+         'q':q, 
+         'h':h, 
+         'phi':phi, 
+         'phi_d':phi_d, 
+         'x_N':x_N, 
+         'u_N':u_N, 
+         'k':k, 
+         'phi_int':phi_int, 
+         't':model.t}
+    # print 'sand'
+    # print sand
+    # print phi_d
+    # print phi_2_d
+    pickle.dump(m, open(file, 'w'))
 
 def print_timestep_info(model):
     info_green("END OF TIMESTEP " + timestep_info_string(model))

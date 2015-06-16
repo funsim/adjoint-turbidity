@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<adjoint_sw_sediment>
+  <project_name>
+    <string_value lines="1">bed_4</string_value>
+  </project_name>
+  <mesh>
+    <element_count>
+      <integer_value rank="0">20</integer_value>
+    </element_count>
+  </mesh>
+  <time_options>
+    <time_discretisation name="runge_kutta"/>
+    <adaptive_timestep>
+      <cfl_criteria>
+        <real_value rank="0">0.1</real_value>
+      </cfl_criteria>
+    </adaptive_timestep>
+    <finish_time>
+      <real_value rank="0">100000.0</real_value>
+    </finish_time>
+  </time_options>
+  <output_options/>
+  <spatial_discretisation>
+    <discretisation name="discontinuous">
+      <slope_limit/>
+    </discretisation>
+  </spatial_discretisation>
+  <non_dimensional_numbers/>
+  <initial_conditions>
+    <height>
+      <form>
+        <string_value lines="20" type="code" language="python">model.model_norm</string_value>
+        <additional_form_var>
+          <var name="model_norm">
+            <string_value lines="20" type="code" language="python">model.model_norm = Constant(1e0)</string_value>
+          </var>
+        </additional_form_var>
+      </form>
+    </height>
+    <initial_length>
+      <form>
+        <string_value lines="20" type="code" language="python">model.x_N_ic*model.x_N_norm*model.model_norm</string_value>
+        <additional_form_var>
+          <var name="x_N_ic">
+            <string_value lines="20" type="code" language="python">model.x_N_ic = project(Constant(1.0), model.R, name='x_N_ic')</string_value>
+          </var>
+          <var name="x_N_norm">
+            <string_value lines="20" type="code" language="python">model.x_N_norm = Constant(0.001, name='x_N_norm')</string_value>
+          </var>
+        </additional_form_var>
+      </form>
+    </initial_length>
+    <timestep>
+      <form>
+        <string_value lines="20" type="code" language="python">(model.x_N_ic*model.x_N_norm*model.model_norm*model.dX)*model.adapt_cfl/1.19</string_value>
+      </form>
+    </timestep>
+  </initial_conditions>
+</adjoint_sw_sediment>

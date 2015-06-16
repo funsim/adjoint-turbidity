@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+plt.ioff()
 from dolfin import *
 from dolfin_adjoint import *
 from adjoint_sw_sediment import *
@@ -97,7 +99,7 @@ def gen_target(model, h_0_norm, type):
   for i, c in enumerate(ec_coeff):
     target += c*pow(model.y*x_N*model.h_0*h_0_norm, i)
 
-  return equation.smooth_pos(target, eps=1e-3)
+  return target
 
 def gen_target_2(model, h_0_norm, type):
   ec_coeff = fit(7, type)
@@ -106,10 +108,10 @@ def gen_target_2(model, h_0_norm, type):
   for i, c in enumerate(ec_coeff):
     target += c*pow(model.y*x_N*model.h_0*h_0_norm, i)
 
-  return equation.smooth_pos(target, eps=1e-3)
+  return target
 
 def plot_functions(model, fns, type, with_data=False, h_0_norm=Constant(1)):
-  from matplotlib import pyplot as plt
+  fig = plt.figure()
   for fn in fns:
     plt.plot(input_output.map_function_to_array(model.y, model.mesh), 
              input_output.map_function_to_array(fn, model.mesh),
@@ -120,11 +122,9 @@ def plot_functions(model, fns, type, with_data=False, h_0_norm=Constant(1)):
     h_0 = model.h_0.vector().array()[0]*h_0_norm((0,0))
     plt.scatter(phi_d_x[type]/(x_N*h_0), phi_d_y[type], label='data')
   plt.legend()
-  plt.show()
+  plt.savefig('one-shot.png')
 
 if __name__=='__main__':
-  from matplotlib import pyplot as plt
-
   mesh = IntervalMesh(20, 0.0, 1.0)
   fs = FunctionSpace(mesh, 'CG', 1)
   y = project(Expression('x[0]'), fs)

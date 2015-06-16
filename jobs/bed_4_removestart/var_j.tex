@@ -1,0 +1,114 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usetikzlibrary{calc}
+\pgfplotsset{compat=newest}
+\pgfplotsset{every axis/.append style={line width=0.5pt}}
+\pgfplotsset{every axis legend/.append style={
+font=\footnotesize,
+at={(0.01,0.99)},
+anchor=north west}}
+\tikzset{mark size=1.0}
+\begin{document}
+\begin{tikzpicture}
+\begin{semilogyaxis}[
+width=0.75\textwidth,
+height=0.75\textwidth,
+font=\scriptsize,
+scaled ticks=false,
+xmin = -0.200000000000000,
+xmax = 2.6,
+yticklabel style={
+anchor=east,
+/pgf/number format/precision=2,
+/pgf/number format/fixed,
+/pgf/number format/fixed zerofill,
+},
+ylabel=$J$,
+line width=0.1pt,
+clip=false
+]
+\addplot[red, densely dashed, mark=*, mark options=solid] table[x=var,y=j] {
+var j
+1.0 0.00690683566013
+1.02871727731 0.00804822562657
+1.30620643095 0.0292905970498
+1.08049296117 0.011737186544
+0.862867614845 0.00444535913052
+0.650840498149 0.002114235265
+0.658580970831 0.00209423648269
+0.786102969016 0.00157821658722
+1.28276691461 0.00142571846849
+1.41946934549 0.00132741612488
+2.27703605803 1.18617008616e-05
+2.25254905278 7.38302211944e-06
+2.28450418391 3.60256160565e-06
+2.28195920807 3.44476666799e-06
+2.28117745714 3.44359541274e-06
+};
+\addlegendentry{$(h_0)_n / (h_0)_0$}
+\addplot[blue, densely dashed, mark=*, mark options=solid] table[x=var,y=j] {
+var j
+1.0 0.00690683566013
+1.01576971123 0.00804822562657
+1.02680316422 0.0292905970498
+0.924669265436 0.011737186544
+0.87207329663 0.00444535913052
+0.933262444383 0.002114235265
+0.94151072051 0.00209423648269
+0.862465401863 0.00157821658722
+0.5674899355 0.00142571846849
+0.501785562203 0.00132741612488
+0.56481220782 1.18617008616e-05
+0.583308746615 7.38302211944e-06
+0.602353836408 3.60256160565e-06
+0.59812099455 3.44476666799e-06
+0.598205946231 3.44359541274e-06
+};
+\addlegendentry{$(\psi_0)_n / (\psi_0)_0$}
+\addplot[black!30!green, densely dashed, mark=*, mark options=solid] table[x=var,y=j] {
+var j
+1.0 0.00690683566013
+1.02603630639 0.00804822562657
+1.45710632106 0.0292905970498
+1.28097785914 0.011737186544
+1.08115259928 0.00444535913052
+0.709467644747 0.002114235265
+0.50418375739 0.00209423648269
+0.0506631297115 0.00157821658722
+0.365065045877 0.00142571846849
+0.350623949563 0.00132741612488
+0.173507065331 1.18617008616e-05
+0.186514057083 7.38302211944e-06
+0.179548596264 3.60256160565e-06
+0.179205063891 3.44476666799e-06
+0.17927856136 3.44359541274e-06
+};
+\addlegendentry{$(D)_n / (D)_0$}
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.006906835660130 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.008048225626568 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.029290597049803 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.011737186544002 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.004445359130517 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.002114235264998 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.002094236482686 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.001578216587222 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.001425718468490 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.001327416124882 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.000011861700862 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.000007383022119 };
+\addplot[gray, densely dotted, domain=-0.200000000000000:2.6] function { 0.000003443595413 };
+\node[anchor=west] at (axis cs:2.61,0.050000000000000) {\tiny iteration $(n)$};
+\node[anchor=west] at (axis cs:2.61,0.006506835660130) {\tiny $0$};
+\node[anchor=west] at (axis cs:2.61,0.008248225626568) {\tiny $1$};
+\node[anchor=west] at (axis cs:2.61,0.029290597049803) {\tiny $2$};
+\node[anchor=west] at (axis cs:2.61,0.011737186544002) {\tiny $3$};
+\node[anchor=west] at (axis cs:2.61,0.004445359130517) {\tiny $4$};
+\node[anchor=west] at (axis cs:2.61,0.002094236482686) {\tiny $5$--$6$};
+\node[anchor=west] at (axis cs:2.61,0.001425718468490) {\tiny $7$--$9$};
+\node[anchor=west] at (axis cs:2.61,0.000011861700862) {\tiny $10$};
+\node[anchor=west] at (axis cs:2.61,0.000007383022119) {\tiny $11$};
+\node[anchor=west] at (axis cs:2.61,0.000003443595413) {\tiny $12$--$14$};
+\end{semilogyaxis}
+\end{tikzpicture}
+\end{document}
