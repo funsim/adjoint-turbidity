@@ -1,8 +1,8 @@
 Installation instructions
 -------------------------
 
-    1. Install FEniCS 1.x from http://fenicsproject.org/
-    2. Install dolfin-adjoint 1.x from http://www.dolfin-adjoint.org/
+    1. Install FEniCS 1.3 from http://fenicsproject.org/
+    2. Install dolfin-adjoint 1.3 from http://www.dolfin-adjoint.org/
     3. Install the most recent version of libspud from the Fluidity project https://github.com/FluidityProject/fluidity
     4. Clone this respositroy and include its root path to $PYTHONPATH
 
