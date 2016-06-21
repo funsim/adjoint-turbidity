@@ -2,23 +2,31 @@ Installation instructions
 -------------------------
 
     1. Install FEniCS 1.3 from http://fenicsproject.org/
-    2. Install dolfin-adjoint 1.3 from http://www.dolfin-adjoint.org/
-    3. Install the most recent version of libspud from the Fluidity project https://github.com/FluidityProject/fluidity
-    4. Clone this repository and include its root path to $PYTHONPATH
+    2. Install libadjoint from https://bitbucket.org/dolfin-adjoint/libadjoint. Check out commit 3a99e45533d1ecb3a828c8072d22067d0a66d5b0.
+    3. Install dolfin-adjoint from https://bitbucket.org/dolfin-adjoint/dolfin-adjoint. Check out commit 027edf90c992dbae424454884df4a95e8f2a9a4a.
+    4. Install the most recent version of libspud from the Fluidity project https://github.com/FluidityProject/fluidity
+    5. Install pyipopt from https://github.com/xuy/pyipopt.
+    5. Clone this repository and include its root path to $PYTHONPATH
 
 
 Simulation scripts
 ------------------
 
 * Section 2.5 Forward model verifiction
-    Directory tests/similarity
-    Run with "python similarity.py"
+    Reproduce with:
+    $ cd tests/similarity
+    $ python similarity.py
+    $ python plot.py
 
+* Section 4.3 Verification of the gradient calculation
+    Reproduce with:
+    $ cd tests/taylor
+    $ python taylor.py
 
+* Section 4.4 and 4.6: Optimisation of a model with one/two sediment class(es)
+    Reproduce with:
+    $ cd jobs/bed_11
+    $ python bed_4_test.py "1"
+    $ ./MAKEFILE
+    $ ./MAKEFILE2
 
-
-drag
-entrainment
-flux input
-concentration gradient
-erosion
