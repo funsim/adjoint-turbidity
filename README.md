@@ -1,7 +1,7 @@
-AdjTurbidity 1.0
+AdjointTurbidity 1.0
 ================
 
-This repository contains the model AdjTurbidity 1.0, described in the paper
+This repository contains the model AdjointTurbidity 1.0, described in the paper
 
 *Samuel D. Parkinson, Simon W. Funke, Jon Hill, Matthew D. Piggott, and Peter A. Allison*, **Application of the adjoint approach to optimise the initial conditions of a turbidity current**, Geoscientific Model Development (GMD).
 
