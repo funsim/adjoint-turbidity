@@ -1,3 +1,11 @@
+AdjTurbidity 1.0
+================
+
+This repository contains the model AdjTurbidity 1.0, described in the paper
+
+*Samuel D. Parkinson, Simon W. Funke, Jon Hill, Matthew D. Piggott, and Peter A. Allison*, **Application of the adjoint approach to optimise the initial conditions of a turbidity current**, Geoscientific Model Development (GMD).
+
+
 Installation instructions
 -------------------------
 
@@ -12,21 +20,33 @@ Installation instructions
 Simulation scripts
 ------------------
 
-* Section 2.5 Forward model verifiction
+* Section 2.5 Forward model verification
     Reproduce with:
+
+```
+#!bash
     $ cd tests/similarity
     $ python similarity.py
     $ python plot.py
+```
+
 
 * Section 4.3 Verification of the gradient calculation
+
+```
+#!bash
     Reproduce with:
     $ cd tests/taylor
     $ python taylor.py
+```
 
 * Section 4.4 and 4.6: Optimisation of a model with one/two sediment class(es)
     Reproduce with:
+
+```
+#!bash
     $ cd jobs/bed_11
     $ python bed_4_test.py "1"
     $ ./MAKEFILE
     $ ./MAKEFILE2
-
+```
