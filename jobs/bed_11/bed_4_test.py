@@ -13,7 +13,7 @@ from optparse import OptionParser
 import numpy as np
 import sys
 import pickle
-import pynotify
+#import pynotify
 # hack!!
 sys.setrecursionlimit(100000)
 
@@ -23,13 +23,13 @@ solver_parameters["newton_solver"]["linear_solver"] = "lu"
 
 set_log_level(ERROR)
 
-################################## 
+##################################
 # INPUT VARIABLES
-################################## 
+##################################
 # method
 methods = "L-BFGS-B", "IPOPT", "TT"
 method = methods[eval(sys.argv[1])]
-# starting values 
+# starting values
 iv = [2300, 0.0007, 200e-6**2]
 s = np.array(iv)
 one_shot = False
@@ -47,34 +47,34 @@ if len(sys.argv) > 2:
     one_shot = True
 
 # bnds =   (
-#   ( 
-#     100/s[0], 
-#     0.0001/s[1], 
+#   (
+#     100/s[0],
+#     0.0001/s[1],
 #     125e-6**2/s[2]
-#     ), 
-#   ( 
-#     4000/s[0], 
-#     0.5/s[1], 
-#     250e-6**2/s[2] 
+#     ),
+#   (
+#     4000/s[0],
+#     0.5/s[1],
+#     250e-6**2/s[2]
 #     )
 #   )
 
 bnds =   (
-  ( 
-    10/s[0], 
-    1e-5/s[1], 
+  (
+    10/s[0],
+    1e-5/s[1],
     1e-6**2/s[2]
-    ), 
-  ( 
-    40000/s[0], 
-    0.4/s[1], 
-    1e-3**2/s[2] 
+    ),
+  (
+    40000/s[0],
+    0.4/s[1],
+    1e-3**2/s[2]
     )
   )
 
-################################## 
+##################################
 # MODEL SETUP
-################################## 
+##################################
 
 # define end criteria
 if method == "TT":
@@ -85,14 +85,14 @@ if method == "TT":
       return True
     else: return False
 else:
-  def end_criteria(model): 
+  def end_criteria(model):
     y, q, h, phi, phi_d, x_N, u_N, k, phi_int = \
-      input_output.map_to_arrays(model.w[0], model.y, model.mesh) 
-    phi_int_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[8]  
-    x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5] 
+      input_output.map_to_arrays(model.w[0], model.y, model.mesh)
+    phi_int_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[8]
+    x_N_start = input_output.map_to_arrays(model.w['ic'], model.y, model.mesh)[5]
     if phi_int/phi_int_start*x_N/x_N_start < 0.01:
       return True
-    return False  
+    return False
 
 # load model
 model = Model('bed_4_sim.asml', end_criteria = end_criteria, no_init=True)
@@ -100,7 +100,7 @@ model.initialise_function_spaces()
 model.ts = 0
 load_options.post_init(model, model.xml_path)
 
-# parameter 
+# parameter
 h_0_norm = Constant(s[0])
 phi_0_norm = Constant(s[1])
 D_2_norm = Constant(s[2])
@@ -115,9 +115,9 @@ v = TestFunction(model.R)
 # generate form
 model.generate_form()
 
-################################## 
+##################################
 # SET UP PARAMETERS
-################################## 
+##################################
 model.h_0.assign( Constant( iv[0]/h_0_norm((0,0)) ) )
 phi_0.assign( Constant( iv[1]/phi_0_norm((0,0)) ) )
 D_2.assign( Constant( iv[2]/D_2_norm((0,0)) ) )
@@ -126,7 +126,7 @@ junk = project(D_2, model.R)
 junk = project(model.h_0, model.R)
 junk = project(phi_0, model.R)
 # create list
-parameters = [InitialConditionParameter(model.h_0), 
+parameters = [InitialConditionParameter(model.h_0),
               InitialConditionParameter(phi_0),
               InitialConditionParameter(D_2)]
 info_green('Starting values: %.2e %.2e %.2e'%(model.h_0.vector().array()[0],
@@ -136,11 +136,11 @@ info_green('Unscaled starting values: %.2e %.2e %.2e'%(model.h_0.vector().array(
                                                        phi_0.vector().array()[0]*s[1],
                                                        (D_2.vector().array()[0]*s[2])**0.5))
 
-################################## 
+##################################
 # CREATE REDUCED FUNCTIONAL
-################################## 
+##################################
 q, h, phi, phi_d, x_N, u_N, k, phi_int = split(model.w[0])
-x_N_start = split(model.w['ic'])[4] 
+x_N_start = split(model.w['ic'])[4]
 x_N_mod = x_N - x_N_start
 
 # portions of deposit domain
@@ -184,13 +184,13 @@ rf = MyReducedFunctional(model, J, parameters,
                          prep_target_cb = prep_target_cb,
                          method = method)
 
-################################## 
+##################################
 # TAYLOR TEST
-################################## 
+##################################
 if method == "TT":
   model.ts_info = True
   rf.autoscale = False
-  helpers.test_gradient_array(rf.compute_functional_mem, 
+  helpers.test_gradient_array(rf.compute_functional_mem,
                               rf.compute_gradient_mem,
                               np.array([model.h_0.vector().array()[0],
                                         phi_0.vector().array()[0],
@@ -201,9 +201,9 @@ if method == "TT":
   # notice = pynotify.Notification("ALERT!!", "dolfin-adjoint taylor-test has finished")
   # notice.show()
 
-################################## 
+##################################
 # ONE-SHOT
-################################## 
+##################################
 if one_shot:
   model.ts_info = True
   model.plot = 1.0
@@ -261,24 +261,24 @@ if one_shot: # or method == "TT":
   info_green("L = %f"%L)
   info_green("Fn = %f"%assemble(J_integral*dx))
 
-################################## 
-# OPTIMISE 
-################################## 
+##################################
+# OPTIMISE
+##################################
 if not one_shot:
 
-  ################################## 
+  ##################################
   # L-BFGS-B
-  ################################## 
+  ##################################
   if method == "L-BFGS-B":
-    m_opt = minimize(rf, method = "L-BFGS-B", 
-                     tol=1e-9,  
-                     options = {'disp': True }, 
+    m_opt = minimize(rf, method = "L-BFGS-B",
+                     tol=1e-9,
+                     options = {'disp': True },
                      bounds = bnds,
-                     in_euclidian_space = False) 
+                     in_euclidian_space = False)
 
-  ################################## 
+  ##################################
   # IPOPT
-  ################################## 
+  ##################################
   if method == "IPOPT":
     # call once to initialise
     rf([p.coeff for p in parameters])
@@ -291,4 +291,4 @@ if not one_shot:
     # run optimisation
     nlp = rfn.pyipopt_problem(bounds=bnds)
     # nlp = rfn.pyipopt_problem()
-    a_opt = nlp.solve(full=False) 
+    a_opt = nlp.solve(full=False)

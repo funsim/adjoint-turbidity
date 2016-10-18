@@ -28,7 +28,7 @@ WORKDIR /root
 
 RUN git clone https://github.com/FluidityProject/fluidity.git && cd fluidity/libspud && ./configure && make install
 
-RUN apt-get install -y curl wget unzip
+RUN apt-get install -y curl wget unzip python-pip
 
 ENV IPOPT_VER=3.12.6
 COPY dolfin-adjoint.conf $FENICS_HOME/dolfin-adjoint.conf

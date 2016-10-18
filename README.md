@@ -38,7 +38,6 @@ Simulation scripts
 #!bash
     $ cd tests/similarity
     $ python similarity.py
-    $ python plot.py
 ```
 
 
