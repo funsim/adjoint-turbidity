@@ -6,8 +6,19 @@ This repository contains the model AdjointTurbidity 1.0, described in the paper
 *Samuel D. Parkinson, Simon W. Funke, Jon Hill, Matthew D. Piggott, and Peter A. Allison*, **Application of the adjoint approach to optimise the initial conditions of a turbidity current**, Geoscientific Model Development (GMD).
 
 
+
 Installation instructions
 -------------------------
+
+Installation with docker
+    1. Install docker
+    2. Build docker container with
+       `docker build -t turbidity .`
+    3. Start docker container with
+       `docker run -i -t turbidity
+
+
+Manual installation:
 
     1. Install FEniCS 1.3 from http://fenicsproject.org/
     2. Install libadjoint from https://bitbucket.org/dolfin-adjoint/libadjoint. Check out commit 3a99e45533d1ecb3a828c8072d22067d0a66d5b0.
