@@ -10,7 +10,7 @@ This repository contains the model AdjointTurbidity 1.0, described in the paper
 Installation instructions
 -------------------------
 
-Installation with docker
+### Installation with docker
     1. Install docker
     2. Build docker container with
        `docker build -t turbidity .`
@@ -18,7 +18,7 @@ Installation with docker
        `docker run -i -t turbidity
 
 
-Manual installation:
+### Manual installation
 
     1. Install FEniCS 1.3 from http://fenicsproject.org/
     2. Install libadjoint from https://bitbucket.org/dolfin-adjoint/libadjoint. Check out commit 3a99e45533d1ecb3a828c8072d22067d0a66d5b0.
