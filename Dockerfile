@@ -28,7 +28,7 @@ WORKDIR /root
 
 RUN git clone https://github.com/FluidityProject/fluidity.git && cd fluidity/libspud && ./configure && make install
 
-RUN apt-get install -y curl wget
+RUN apt-get install -y curl wget unzip
 
 ENV IPOPT_VER=3.12.6
 COPY dolfin-adjoint.conf $FENICS_HOME/dolfin-adjoint.conf
@@ -41,8 +41,10 @@ RUN /bin/bash -l -c "source $FENICS_HOME/dolfin-adjoint.conf && \
 
 RUN /bin/bash -l -c "git clone https://simon_funke@bitbucket.org/simon_funke/adjoint-turbidity.git"
 
+RUN mkdir pgfplots && cd pgfplots && wget "http://downloads.sourceforge.net/project/pgfplots/pgfplots/1.14/pgfplots_1.14.tds.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fpgfplots%2Ffiles%2Fpgfplots%2F1.14%2F&ts=1476811187&use_mirror=netix" -O pgfplots.zip && unzip pgfplots.zip
+RUN echo "export PYTHONPATH=~/pgfplots/scripts/pgfplots" >> .bashrc
 
-RUN echo "export PYTHONPATH=~/adjoint-turbidity" >> .bashrc
+RUN echo "export PYTHONPATH=$PYTHONPATH:~/adjoint-turbidity" >> .bashrc
 RUN echo "export LD_LIBRARY_PATH=~/fluidity/libspud/"  >> .bashrc
 
 WORKDIR /root/adjoint-turbidity
