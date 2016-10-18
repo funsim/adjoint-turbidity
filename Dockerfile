@@ -28,15 +28,22 @@ WORKDIR /root
 
 RUN git clone https://github.com/FluidityProject/fluidity.git && cd fluidity/libspud && ./configure && make install
 
+RUN apt-get install -y curl wget
+
 ENV IPOPT_VER=3.12.6
 COPY dolfin-adjoint.conf $FENICS_HOME/dolfin-adjoint.conf
 
-RUN apt-get install -y curl wget
 RUN /bin/bash -l -c "source $FENICS_HOME/dolfin-adjoint.conf && \
                      update_ipopt && \
-                     update_pyipopt"
-RUN /bin/bash -l -c "source $FENICS_HOME/dolfin-adjoint.conf && \
+                     update_pyipopt && \
                      update_libadjoint && \
                      update_dolfin-adjoint"
 
+RUN /bin/bash -l -c "git clone https://simon_funke@bitbucket.org/simon_funke/adjoint-turbidity.git"
+
+
+RUN echo "export PYTHONPATH=~/adjoint-turbidity" >> .bashrc
+RUN echo "export LD_LIBRARY_PATH=~/fluidity/libspud/"  >> .bashrc
+
+WORKDIR /root/adjoint-turbidity
 CMD ["bash"]
