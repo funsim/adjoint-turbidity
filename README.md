@@ -11,11 +11,11 @@ Installation instructions
 -------------------------
 
 ### Installation with docker
-    1. Install docker
-    2. Build docker container with
+1. Install docker
+2. Build docker container with
        `docker build -t turbidity .`
-    3. Start docker container with
-       `docker run -i -t turbidity
+3. Start docker container with
+       `docker run -i -t turbidity`
 
 
 ### Manual installation
