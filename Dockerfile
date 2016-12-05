@@ -1,4 +1,4 @@
-# Builds a Docker image with OpenTidalFarm master
+# Builds a Docker image with dolfin-adjoint master
 # version built from gitsources. It is based on
 # the dev-dolfin-adjoint image available at
 #
