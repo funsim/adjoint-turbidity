@@ -18,6 +18,7 @@ RUN \
   apt-get -y upgrade && \
   apt-get install -y build-essential && \
   apt-get install -y fenics && \
+  apt-get install -y ipython && \
   rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && \
@@ -44,6 +45,7 @@ RUN echo "export PYTHONPATH=~/pgfplots/scripts/pgfplots" >> .bashrc
 
 RUN /bin/bash -l -c "git clone https://simon_funke@bitbucket.org/simon_funke/adjoint-turbidity.git"
 RUN echo "export PYTHONPATH=$PYTHONPATH:~/adjoint-turbidity" >> .bashrc
+RUN echo "export PYTHONPATH=$PYTHONPATH:~/usr/local/lib/python2.7/dist-packages" >> .bashrc
 RUN echo "export LD_LIBRARY_PATH=/usr/local/lib:~/fluidity/libspud/" >> .bashrc
 
 WORKDIR /root/adjoint-turbidity
