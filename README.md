@@ -58,5 +58,9 @@ Simulation scripts
     $ cd jobs/bed_11
     $ python bed_4_test.py "1"
     $ ./MAKEFILE
+    $ python bed_4_test.py "1" opt_IPOPT_<last_run>.pckl
+    $ mv final.pckl final_end.pckl
+    $ python bed_4_test.py "1" opt_IPOPT_1.pckl
     $ ./MAKEFILE2
 ```
+
